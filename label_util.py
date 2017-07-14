@@ -129,3 +129,13 @@ class LabelUtil:
 
     def get_space_index(self):
         return self.byChar["$"]
+
+
+if __name__ == "__main__":
+    labelUtil = LabelUtil.getInstance()
+    from stt_phone_util import generate_phone_dictionary, generate_phone_label
+    # generate_phone_dictionary()
+    labelUtil.load_unicode_set("resources/unicodemap_phone.csv")
+    label = generate_phone_label("x ian4 ch eng2 j ing1 j i4 zh uang4 k uang4 b i3 j iao4 k un4 n an5")
+    label = labelUtil.convert_bi_graphemes_to_num(label)
+    print(label)

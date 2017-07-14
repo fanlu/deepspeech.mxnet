@@ -8,11 +8,13 @@ from train import do_training
 import mxnet as mx
 from stt_io_iter import STTIter
 from label_util import LabelUtil
+from label_util_zhphone import LabelUtilZhPhone
 from log_util import LogUtil
 import numpy as np
 from stt_datagenerator import DataGenerator
 from stt_metric import STTMetric
 from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
+from stt_phone_util import generate_phone_dictionary
 from stt_bucketing_module import STTBucketingModule
 from stt_io_bucketingiter import BucketSTTIter
 sys.path.insert(0, "../../python")
@@ -50,6 +52,16 @@ def load_labelutil(labelUtil, is_bi_graphemes, language="en"):
                                 " Please set overwrite_bi_graphemes_dictionary True at train section")
         else:
             labelUtil.load_unicode_set("resources/unicodemap_en_baidu.csv")
+    elif language == "zh":
+        # zh use is_bi_graphemes to deal phone
+        if is_bi_graphemes:
+            try:
+                labelUtil.load_unicode_set("resources/unicodemap_phone.csv")
+            except:
+                raise Exception("There is no resources/unicodemap_phone.csv." +
+                                " Please set overwrite_bi_graphemes_dictionary True at train section")
+        else:
+            labelUtil.load_unicode_set("resources/6855map.txt")
     else:
         raise Exception("Error: Language Type: %s" % language)
 
@@ -76,16 +88,20 @@ def load_data(args):
 
     log = LogUtil().getlogger()
     labelUtil = LabelUtil.getInstance()
+    labelUtilZh = LabelUtilZhPhone.getInstance()
     if mode == "train" or mode == "load":
         data_json = args.config.get('data', 'train_json')
         val_json = args.config.get('data', 'val_json')
         datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
         datagen.load_train_data(data_json, max_duration=max_duration)
         datagen.load_validation_data(val_json, max_duration=max_duration)
-        if is_bi_graphemes:
+        if is_bi_graphemes and language == "en":
             if not os.path.isfile("resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
                 load_labelutil(labelUtil=labelUtil, is_bi_graphemes=False, language=language)
                 generate_bi_graphemes_dictionary(datagen.train_texts+datagen.val_texts)
+        if is_bi_graphemes and language == "zh":
+            if not os.path.isfile("resources/unicodemap_phone.csv") or overwrite_bi_graphemes_dictionary:
+                generate_phone_dictionary()
         load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 

@@ -9,6 +9,7 @@ from config_util import generate_file_path
 from log_util import LogUtil
 from label_util import LabelUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_label
+from stt_phone_util import generate_phone_label
 from multiprocessing import cpu_count, Process, Manager
 
 class DataGenerator(object):
@@ -130,7 +131,8 @@ class DataGenerator(object):
             raise Exception("Invalid partition to load metadata. "
                             "Must be train/validation/test")
         if is_bi_graphemes:
-            self.max_label_length = max([len(generate_bi_graphemes_label(text)) for text in texts])
+            # self.max_label_length = max([len(generate_bi_graphemes_label(text)) for text in texts])
+            self.max_label_length = max([len(generate_phone_label(text)) for text in texts])
         else:
             self.max_label_length = max([len(text) for text in texts])
         return self.max_label_length
@@ -181,7 +183,9 @@ class DataGenerator(object):
             feat = self.normalize(feat)  # Center using means and std
             x[i, :feat.shape[0], :] = feat
             if is_bi_graphemes:
-                label = generate_bi_graphemes_label(texts[i])
+                # label = generate_bi_graphemes_label(texts[i])
+                # label = labelUtil.convert_bi_graphemes_to_num(label)
+                label = generate_phone_label(texts[i])
                 label = labelUtil.convert_bi_graphemes_to_num(label)
                 y[i, :len(label)] = label
             else:

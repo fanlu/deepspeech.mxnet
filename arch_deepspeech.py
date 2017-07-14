@@ -140,7 +140,7 @@ def arch(args, seq_len=None):
                                  seq_len=seq_len_after_conv_layer2,
                                  num_hidden_gru_list=num_hidden_rnn_list,
                                  num_gru_layer=num_rnn_layer,
-                                 dropout=0.,
+                                 dropout=0.2,
                                  is_batchnorm=is_batchnorm,
                                  is_bucketing=is_bucketing)
             elif rnn_type == "bigru":
@@ -148,7 +148,7 @@ def arch(args, seq_len=None):
                                     seq_len=seq_len_after_conv_layer2,
                                     num_hidden_gru_list=num_hidden_rnn_list,
                                     num_gru_layer=num_rnn_layer,
-                                    dropout=0.,
+                                    dropout=0.2,
                                     is_batchnorm=is_batchnorm,
                                     is_bucketing=is_bucketing)
             else:
@@ -159,7 +159,8 @@ def arch(args, seq_len=None):
                               num_layer=num_rear_fc_layers, prefix="rear",
                               num_hidden_list=num_hidden_rear_fc_list,
                               act_type_list=act_type_rear_fc_list,
-                              is_batchnorm=is_batchnorm)
+                              is_batchnorm=is_batchnorm,
+                              dropout_rate=0.2)
             # warpctc layer
             net = warpctc_layer(net=net,
                                 seq_len=seq_len_after_conv_layer2,
