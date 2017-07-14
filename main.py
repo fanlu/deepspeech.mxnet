@@ -8,7 +8,6 @@ from train import do_training
 import mxnet as mx
 from stt_io_iter import STTIter
 from label_util import LabelUtil
-from label_util_zhphone import LabelUtilZhPhone
 from log_util import LogUtil
 import numpy as np
 from stt_datagenerator import DataGenerator
@@ -88,7 +87,6 @@ def load_data(args):
 
     log = LogUtil().getlogger()
     labelUtil = LabelUtil.getInstance()
-    labelUtilZh = LabelUtilZhPhone.getInstance()
     if mode == "train" or mode == "load":
         data_json = args.config.get('data', 'train_json')
         val_json = args.config.get('data', 'val_json')

@@ -39,7 +39,7 @@ def tvt():
 
 
 def ai_2_phone():
-  lines = open(_data_path + "resource_aishell/aishell_transcript_v0.8.txt").readlines()
+  lines = open(_data_path + "data_aishell/transcript/aishell_transcript_v0.8.txt").readlines()
   out_file = open("resources/aishell_train.json", 'w')
   out_file1 = open("resources/aishell_validation.json", 'w')
   out_file2 = open("resources/aishell_test.json", 'w')
@@ -55,21 +55,21 @@ def ai_2_phone():
           print("error word:%s" % r)
     if rs[0][6:11] <= "S0723":
       wav = _data_path + "data_aishell/wav/train/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-      audio = wave.open()
+      audio = wave.open(wav)
       duration = float(audio.getnframes()) / audio.getframerate()
       audio.close()
       line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
       out_file.write(line + "\n")
     elif rs[0][6:11] <= "S0763":
       wav = _data_path + "data_aishell/wav/dev/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-      audio = wave.open()
+      audio = wave.open(wav)
       duration = float(audio.getnframes()) / audio.getframerate()
       audio.close()
       line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
       out_file1.write(line + "\n")
     else:
       wav = _data_path + "data_aishell/wav/test/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-      audio = wave.open()
+      audio = wave.open(wav)
       duration = float(audio.getnframes()) / audio.getframerate()
       audio.close()
       line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
