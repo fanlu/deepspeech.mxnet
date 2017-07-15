@@ -130,6 +130,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
             # tensorboard setting
             if (nbatch + 1) % show_every == 0:
                 module.update_metric(loss_metric, data_batch.label)
+                # print("loss=========== %.2f" % loss_metric.get_batch_loss())
             #summary_writer.add_scalar('loss batch', loss_metric.get_batch_loss(), nbatch)
             if (nbatch+1) % save_checkpoint_every_n_batch == 0:
                 log.info('Epoch[%d] Batch[%d] SAVE CHECKPOINT', n_epoch, nbatch)
@@ -144,10 +145,11 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
             module.update_metric(eval_metric, data_batch.label)
 
         # tensorboard setting
-        val_cer, val_n_label, val_l_dist, _ = eval_metric.get_name_value()
-        log.info("Epoch[%d] val cer=%f (%d / %d)", n_epoch, val_cer, int(val_n_label - val_l_dist), val_n_label)
+        val_cer, val_n_label, val_l_dist, val_ctc_loss = eval_metric.get_name_value()
+        log.info("Epoch[%d] val cer=%f (%d / %d), ctc_loss=%f", n_epoch, val_cer, int(val_n_label - val_l_dist), val_n_label, val_ctc_loss)
         curr_acc = val_cer
         summary_writer.add_scalar('CER validation', val_cer, n_epoch)
+        summary_writer.add_scalar('loss validation', val_ctc_loss, n_epoch)
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
 
         data_train.reset()

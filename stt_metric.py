@@ -58,6 +58,7 @@ class STTMetric(mx.metric.EvalMetric):
                     log.info("label: %s " % (labelUtil.convert_num_to_word(l)))
                     log.info("pred : %s , cer: %f (distance: %d/ label length: %d)" % (
                         labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                    # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
                 self.num_inst += 1
                 self.sum_metric += this_cer
                 if self.is_epoch_end:
