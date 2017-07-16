@@ -13,7 +13,7 @@ import numpy as np
 from stt_datagenerator import DataGenerator
 from stt_metric import STTMetric
 from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
-from stt_phone_util import generate_phone_dictionary
+from stt_phone_util import generate_phone_dictionary, generate_word_dictionary
 from stt_bucketing_module import STTBucketingModule
 from stt_io_bucketingiter import BucketSTTIter
 sys.path.insert(0, "../../python")
@@ -100,6 +100,9 @@ def load_data(args):
         if is_bi_graphemes and language == "zh":
             if not os.path.isfile("resources/unicodemap_phone.csv") or overwrite_bi_graphemes_dictionary:
                 generate_phone_dictionary()
+        else:
+            if not os.path.isfile("resources/unicodemap_zi.csv") or overwrite_bi_graphemes_dictionary:
+                generate_word_dictionary()
         load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 
