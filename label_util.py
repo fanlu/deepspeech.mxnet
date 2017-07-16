@@ -140,9 +140,9 @@ if __name__ == "__main__":
     # label = generate_phone_label("x ian4 ch eng2 j ing1 j i4 zh uang4 k uang4 b i3 j iao4 k un4 n an5")
     # label = labelUtil.convert_bi_graphemes_to_num(label)
 
-    # generate_word_dictionary()
+    generate_word_dictionary(["玥"])
 
     labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
-    label = generate_zi_label("而 对 楼市 成交 抑制 作用 最 大 的 限 购")
+    label = generate_zi_label("而 对 楼市 成交 抑制 作用 最 大 的 限 购 玥")
     label = labelUtil.convert_bi_graphemes_to_num(label)
     print(label)

@@ -3,7 +3,7 @@ from collections import Counter
 
 _data_path = "/export/fanlu/speech-to-text-wavenet/asset/data/"
 
-# _data_path = "/Users/lonica/Downloads/resource_aishell/"
+_data_path = "/Users/lonica/Downloads/resource_aishell/"
 
 
 def split_every(n, label):
@@ -42,9 +42,19 @@ def generate_zi_label(label):
       l.append(ch.encode('utf-8'))
   return l
 
+def dedupe(items):
+  seen = set()
+  for item in items:
+    if item not in seen:
+      yield item
+      seen.add(item)
+
 
 def generate_word_dictionary(label_list):
-  freqs = Counter()
+  l = []
+  for line in open(_data_path + '6855map.txt').readlines():
+    r = line.strip().split(" ")
+    l.append(r[1].decode('utf-8'))
   for label in label_list:
     try:
       str_ = label.strip().decode('utf-8')
@@ -52,11 +62,8 @@ def generate_word_dictionary(label_list):
       str_ = label.strip()
     for ch in str_:
       if ch != u' ':
-          freqs[ch] += 1
+          l.append(ch)
   with open('resources/unicodemap_zi.csv', 'w') as zi_label:
     ziwriter = csv.writer(zi_label, delimiter=',')
-    for line in open(_data_path + '6855map.txt').readlines():
-      r = line.strip().split(" ")
-      ziwriter.writerow((r[1], r[0]))
-    for index, key in enumerate(freqs.keys()):
-      ziwriter.writerow((key.encode('utf-8'), index + 6855 + 1))
+    for index, key in enumerate(list(dedupe(l))):
+      ziwriter.writerow((key.encode('utf-8'), index))
