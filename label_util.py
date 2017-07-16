@@ -143,6 +143,6 @@ if __name__ == "__main__":
     # generate_word_dictionary()
 
     labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
-    label = generate_zi_label(u"而 对 楼市 成交 抑制 作用 最 大 的 限 购")
+    label = generate_zi_label("而 对 楼市 成交 抑制 作用 最 大 的 限 购")
     label = labelUtil.convert_bi_graphemes_to_num(label)
     print(label)

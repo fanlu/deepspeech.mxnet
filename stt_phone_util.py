@@ -3,7 +3,7 @@ from collections import Counter
 
 _data_path = "/export/fanlu/speech-to-text-wavenet/asset/data/"
 
-_data_path = "/Users/lonica/Downloads/resource_aishell/"
+# _data_path = "/Users/lonica/Downloads/resource_aishell/"
 
 
 def split_every(n, label):
@@ -43,9 +43,20 @@ def generate_zi_label(label):
   return l
 
 
-def generate_word_dictionary():
+def generate_word_dictionary(label_list):
+  freqs = Counter()
+  for label in label_list:
+    try:
+      str_ = label.strip().decode('utf-8')
+    except:
+      str_ = label.strip()
+    for ch in str_:
+      if ch != u' ':
+          freqs[ch] += 1
   with open('resources/unicodemap_zi.csv', 'w') as zi_label:
     ziwriter = csv.writer(zi_label, delimiter=',')
     for line in open(_data_path + '6855map.txt').readlines():
       r = line.strip().split(" ")
       ziwriter.writerow((r[1], r[0]))
+    for index, key in enumerate(freqs.keys()):
+      ziwriter.writerow((key.encode('utf-8'), index + 6855 + 1))

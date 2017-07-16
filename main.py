@@ -60,7 +60,7 @@ def load_labelutil(labelUtil, is_bi_graphemes, language="en"):
                 raise Exception("There is no resources/unicodemap_phone.csv." +
                                 " Please set overwrite_bi_graphemes_dictionary True at train section")
         else:
-            labelUtil.load_unicode_set("resources/6855map.txt")
+            labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
     else:
         raise Exception("Error: Language Type: %s" % language)
 
@@ -102,7 +102,7 @@ def load_data(args):
                 generate_phone_dictionary()
         else:
             if not os.path.isfile("resources/unicodemap_zi.csv") or overwrite_bi_graphemes_dictionary:
-                generate_word_dictionary()
+                generate_word_dictionary(datagen.train_texts + datagen.val_texts)
         load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 

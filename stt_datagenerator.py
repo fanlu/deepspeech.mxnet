@@ -9,7 +9,7 @@ from config_util import generate_file_path
 from log_util import LogUtil
 from label_util import LabelUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_label
-from stt_phone_util import generate_phone_label
+from stt_phone_util import generate_phone_label, generate_zi_label
 from multiprocessing import cpu_count, Process, Manager
 
 class DataGenerator(object):
@@ -189,8 +189,11 @@ class DataGenerator(object):
                 label = labelUtil.convert_bi_graphemes_to_num(label)
                 y[i, :len(label)] = label
             else:
-                label = labelUtil.convert_word_to_num(texts[i])
-                y[i, :len(texts[i])] = label
+                # label = labelUtil.convert_word_to_num(texts[i])
+                # y[i, :len(texts[i])] = label
+                label = generate_zi_label(texts[i])
+                label = labelUtil.convert_bi_graphemes_to_num(label)
+                y[i, :len(label)] = label
             label_lengths.append(len(label))
         return {
             'x': x,  # (0-padded features of shape(mb_size,timesteps,feat_dim)
