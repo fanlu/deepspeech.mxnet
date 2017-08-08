@@ -54,45 +54,23 @@ class STTMetric(mx.metric.EvalMetric):
         p = pred_best(p)
 
         l_distance = levenshtein_distance(l, p)
+        # l_distance = editdistance.eval(l, p)
         self.total_n_label += len(l)
         self.total_l_dist += l_distance
         this_cer = float(l_distance) / float(len(l))
         if self.is_logging:
-          log = LogUtil().getlogger()
-          labelUtil = LabelUtil.getInstance()
-        self.batch_loss = 0.
-
-        for label, pred in zip(labels, preds):
-          label = label.asnumpy()
-          pred = pred.asnumpy()
-
-          seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
-
-          for i in range(int(int(self.batch_size) / int(self.num_gpu))):
-            l = remove_blank(label[i])
-            p = []
-            for k in range(int(seq_length)):
-              p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
-            p = pred_best(p)
-
-            l_distance = levenshtein_distance(l, p)
-            # l_distance = editdistance.eval(l, p)
-          self.total_n_label += len(l)
-          self.total_l_dist += l_distance
-          this_cer = float(l_distance) / float(len(l))
-          if self.is_logging:
-            log.info("label: %s " % (labelUtil.convert_num_to_word(l)))
-            log.info("pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-              labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
-            # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
-          self.num_inst += 1
-          self.sum_metric += this_cer
-          # if self.is_epoch_end:
-          #    loss = ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu))
-          #    self.batch_loss += loss
-          #    if self.is_logging:
-          #        log.info("loss: %f " % loss)
-      self.total_ctc_loss += 0  # self.batch_loss
+          log.info("label: %s " % (labelUtil.convert_num_to_word(l)))
+          log.info("pred : %s , cer: %f (distance: %d/ label length: %d)" % (
+            labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+          # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
+        self.num_inst += 1
+        self.sum_metric += this_cer
+        # if self.is_epoch_end:
+        #    loss = ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu))
+        #    self.batch_loss += loss
+        #    if self.is_logging:
+        #        log.info("loss: %f " % loss)
+    self.total_ctc_loss += 0  # self.batch_loss
 
   def get_batch_loss(self):
     return self.batch_loss

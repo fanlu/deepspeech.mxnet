@@ -197,7 +197,7 @@ class DataGenerator(object):
             else:
                 # label = labelUtil.convert_word_to_num(texts[i])
                 # y[i, :len(texts[i])] = label
-                label = generate_zi_label(texts[i])
+                label = generate_py_label(texts[i])
                 label = labelUtil.convert_bi_graphemes_to_num(label)
                 y[i, :len(label)] = label
             label_lengths.append(len(label))
