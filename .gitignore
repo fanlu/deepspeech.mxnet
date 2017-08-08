@@ -5,3 +5,5 @@
 checkpoints/*.states
 checkpoints/*.params
 checkpoints/*.json
+*.wav
+*.speex

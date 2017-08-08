@@ -1,9 +1,10 @@
 import csv
 from collections import Counter
+from collections import OrderedDict
 
 _data_path = "/export/fanlu/speech-to-text-wavenet/asset/data/"
 
-#_data_path = "/Users/lonica/Downloads/resource_aishell/"
+# _data_path = "/Users/lonica/Downloads/resource_aishell/"
 
 
 def split_every(n, label):
@@ -30,6 +31,21 @@ def generate_phone_dictionary():
     for i, line in enumerate(open(_data_path + 'thchs30/data_thchs30/lm_phone/lexicon.txt').readlines()):
       bigramwriter.writerow((line.split(" ")[0], i))
 
+def generate_py_label(label):
+  label = label.split(' ')
+  return label
+
+def generate_py_dictionary(label_list):
+  f = OrderedDict()
+  for label in label_list:
+    str_ = label.strip()
+    for ch in str_:
+      if ch != u' ':
+          f[ch] = 1
+  with open('resources/unicodemap_py.csv', 'w') as py_label:
+    pywriter = csv.writer(py_label, delimiter=',')
+    for index, key in enumerate(f.keys()):
+      pywriter.writerow((key, index))
 
 def generate_zi_label(label):
   try:
@@ -51,10 +67,10 @@ def dedupe(items):
 
 
 def generate_word_dictionary(label_list):
-  l = []
+  f = OrderedDict()
   for line in open(_data_path + '6855map.txt').readlines():
     r = line.strip().split(" ")
-    l.append(r[1].decode('utf-8'))
+    f[r[1].decode('utf-8')] = int(r[0])
   for label in label_list:
     try:
       str_ = label.strip().decode('utf-8')
@@ -62,8 +78,9 @@ def generate_word_dictionary(label_list):
       str_ = label.strip()
     for ch in str_:
       if ch != u' ':
-          l.append(ch)
+          f[ch] = 1
   with open('resources/unicodemap_zi.csv', 'w') as zi_label:
     ziwriter = csv.writer(zi_label, delimiter=',')
-    for index, key in enumerate(list(dedupe(l))):
+    for index, key in enumerate(f.keys()):
       ziwriter.writerow((key.encode('utf-8'), index))
+

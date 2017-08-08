@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 import json
 import random
+import socket
+
 import numpy as np
 from stt_utils import calc_feat_dim, spectrogram_from_file
 
@@ -9,7 +11,7 @@ from config_util import generate_file_path
 from log_util import LogUtil
 from label_util import LabelUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_label
-from stt_phone_util import generate_phone_label, generate_zi_label
+from stt_phone_util import generate_phone_label, generate_zi_label, generate_py_label
 from multiprocessing import cpu_count, Process, Manager
 
 class DataGenerator(object):
@@ -36,7 +38,8 @@ class DataGenerator(object):
         self.max_length_list_in_batch = []
         # 1d 161 length of array filled with random value
         #[0.0, 1.0)
-        self.rng = random.Random()
+        host_name = socket.gethostname()
+        self.rng = random.Random(hash(host_name))
         if desc_file is not None:
             self.load_metadata_from_desc_file(desc_file)
         self.step = step
@@ -122,7 +125,7 @@ class DataGenerator(object):
     def normalize(self, feature, eps=1e-14):
         return (feature - self.feats_mean) / (self.feats_std + eps)
 
-    def get_max_label_length(self, partition, is_bi_graphemes=False):
+    def get_max_label_length(self, partition, is_bi_graphemes=False, language="zh", zh_type="zi"):
         if partition == 'train':
             texts = self.train_texts + self.val_texts
         elif partition == 'test':
@@ -130,9 +133,12 @@ class DataGenerator(object):
         else:
             raise Exception("Invalid partition to load metadata. "
                             "Must be train/validation/test")
-        if is_bi_graphemes:
-            # self.max_label_length = max([len(generate_bi_graphemes_label(text)) for text in texts])
+        if language == "en" and is_bi_graphemes:
+            self.max_label_length = max([len(generate_bi_graphemes_label(text)) for text in texts])
+        elif language == "zh" and zh_type == "phone":
             self.max_label_length = max([len(generate_phone_label(text)) for text in texts])
+        elif language == "zh" and zh_type == "py":
+            self.max_label_length = max([len(generate_py_label(text)) for text in texts])
         else:
             self.max_label_length = max([len(text) for text in texts])
         return self.max_label_length
@@ -267,3 +273,12 @@ class DataGenerator(object):
         np.savetxt(
             generate_file_path(self.save_dir, self.model_name, 'feats_std'), self.feats_std)
         log.info("End calculating mean and std from samples")
+
+
+if __name__ == "__main__":
+    datagen = DataGenerator("test", "test1")
+    datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
+    # datagen.featurize("/Users/lonica/Downloads/103-1240-0000.wav", overwrite=True, save_feature_as_csvfile=True)
+    # datagen.featurize("/Users/lonica/Downloads/5390-30102-0021.wav", overwrite=True, save_feature_as_csvfile=True)
+    # datagen.featurize("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/S0150/S0150_mic/BAC009S0150W0498.wav", overwrite=True, save_feature_as_csvfile=True)
+

@@ -23,10 +23,10 @@ from sentence2phoneme import sentence2phoneme, loadmap
 import thulac
 thu1 = thulac.thulac(seg_only=True)
 _data_path = "/Users/lonica/Downloads/"
-_data_path = "/export/fanlu/aishell/"
+# _data_path = "/export/fanlu/aishell/"
 
 word_2_lexicon = defaultdict(list)
-
+thu1 = thulac.thulac(seg_only=True)
 
 def read_lexicon():
   lines = open(_data_path + "resource_aishell/lexicon.txt").readlines()
@@ -139,6 +139,15 @@ def ai_2_word():
   out_file2.close()
 
 
+def ai_2_word_single(wav):
+  out_file = open("resources/d.json", 'w')
+  audio = wave.open(wav)
+  duration = float(audio.getnframes()) / audio.getframerate()
+  audio.close()
+  line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"1 1\"}"
+  out_file.write(line + "\n")
+
+
 pinyin_2_phone_map = {}
 phone_2_pinyin_map = {}
 
@@ -248,6 +257,54 @@ def zi_2_phone():
     text = d.get("text").encode('utf-8')
     phone = sentence2phoneme(text, pinyin2phoneme)
     line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + str(d.get("duration")) + ", \"text\":\"" + phone + "\"}"
+    out_file.write(line + "\n")
+  out_file.close()
+
+
+py_2_phone_map = {}
+
+
+def py_2_phone():
+  ts = open("/Users/lonica/Downloads/resource_aishell/table.txt").readlines()
+  ss = open("/Users/lonica/Downloads/resource_aishell/special.txt").readlines()
+  for t in ts:
+    py, smym = t.split('->')
+    py_2_phone_map[py] = smym.strip().split('+')
+  for s in ss:
+    py, smym = s.split('->')
+    py_2_phone_map[py] = smym.strip().split('+')
+
+
+def zi_2_phone():
+  ls = open("train.json").readlines()
+  out_file = open("resources/aishell_thchs30_noise_phone.json", "w")
+  for l in ls:
+    d = json.loads(l)
+    text = d.get("text")
+    str_ = text.strip().replace(" ", "")
+    zis = []
+    for ch in str_:
+      if ch != u' ':
+        phones = word_2_lexicon.get(ch.encode('utf-8'))
+        if len(phones) > 1:
+          zis += phones
+    pyl = pypinyin.pinyin(str_, style=pypinyin.TONE3)
+    phone = []
+    for p in pyl:
+      # print(p[0])
+      py = p[0][:-1]
+      sd = p[0][-1]
+      try:
+        sd = int(sd)
+      except:
+        py = p[0]
+        sd = "5"
+      print(py)
+      sm, ym = py_2_phone_map.get(py)
+      phone.append(sm)
+      phone.append(ym + str(sd))
+    line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + str(d.get("duration")) + ", \"text\":\"" + " ".join(
+      phone) + "\"}"
     out_file.write(line + "\n")
   out_file.close()
 

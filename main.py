@@ -13,7 +13,7 @@ import numpy as np
 from stt_datagenerator import DataGenerator
 from stt_metric import STTMetric
 from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
-from stt_phone_util import generate_phone_dictionary, generate_word_dictionary
+from stt_phone_util import generate_phone_dictionary, generate_word_dictionary, generate_py_dictionary
 from stt_bucketing_module import STTBucketingModule
 from stt_io_bucketingiter import BucketSTTIter
 sys.path.insert(0, "../../python")
@@ -41,7 +41,7 @@ class ConfigLogger(object):
         line = data.strip()
         self.__log.info(line)
 
-def load_labelutil(labelUtil, is_bi_graphemes, language="en"):
+def load_labelutil(labelUtil, is_bi_graphemes, language="en", zh_type="zi"):
     if language == "en":
         if is_bi_graphemes:
             try:
@@ -53,7 +53,9 @@ def load_labelutil(labelUtil, is_bi_graphemes, language="en"):
             labelUtil.load_unicode_set("resources/unicodemap_en_baidu.csv")
     elif language == "zh":
         # zh use is_bi_graphemes to deal phone
-        if is_bi_graphemes:
+        if zh_type == "py":
+            labelUtil.load_unicode_set("resources/unicodemap_py.csv")
+        elif zh_type == "phone":
             try:
                 labelUtil.load_unicode_set("resources/unicodemap_phone.csv")
             except:
@@ -80,6 +82,7 @@ def load_data(args):
     save_dir = 'checkpoints'
     model_name = args.config.get('common', 'prefix')
     is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
+    zh_type = args.config.get('data', 'zh_type')
     overwrite_meta_files = args.config.getboolean('train', 'overwrite_meta_files')
     overwrite_bi_graphemes_dictionary = args.config.getboolean('train', 'overwrite_bi_graphemes_dictionary')
     max_duration = args.config.getfloat('data', 'max_duration')
@@ -97,18 +100,16 @@ def load_data(args):
             if not os.path.isfile("resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
                 load_labelutil(labelUtil=labelUtil, is_bi_graphemes=False, language=language)
                 generate_bi_graphemes_dictionary(datagen.train_texts+datagen.val_texts)
-        print(is_bi_graphemes)
-	print(language)
-	print(is_bi_graphemes and language == "zh")
-	if is_bi_graphemes and language == "zh":
+        if language == "zh" and zh_type == "phone":
             if not os.path.isfile("resources/unicodemap_phone.csv") or overwrite_bi_graphemes_dictionary:
                 generate_phone_dictionary()
-        else:
+        elif language == "zh" and zh_type == "zi":
             if not os.path.isfile("resources/unicodemap_zi.csv") or overwrite_bi_graphemes_dictionary:
-   		print("generate word")
-                generate_word_dictionary(datagen.train_texts + datagen.val_texts)
-        load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language)
- 	print("load_label")
+                generate_word_dictionary(datagen.train_texts + datagen.val_texts + datagen.test_texts)
+        elif language == "zh" and zh_type == "py":
+            if not os.path.isfile("resources/unicodemap_py.csv") or overwrite_bi_graphemes_dictionary:
+                generate_py_dictionary(datagen.train_texts + datagen.val_texts + datagen.test_texts)
+        load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language, zh_type=zh_type)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 
         if mode == "train":
@@ -131,7 +132,7 @@ def load_data(args):
         test_json = args.config.get('data', 'test_json')
         datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
         datagen.load_train_data(test_json, max_duration=max_duration)
-        labelutil = load_labelutil(labelUtil, is_bi_graphemes, language="zh")
+        labelutil = load_labelutil(labelUtil, is_bi_graphemes, language="zh", zh_type=zh_type)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
         datagen.get_meta_from_file(
             np.loadtxt(generate_file_path(save_dir, model_name, 'feats_mean')),
@@ -145,11 +146,11 @@ def load_data(args):
     if mode == "train" or mode == "load":
         max_t_count = datagen.get_max_seq_length(partition="train")
         max_label_length = \
-            datagen.get_max_label_length(partition="train", is_bi_graphemes=is_bi_graphemes)
+            datagen.get_max_label_length(partition="train", is_bi_graphemes=is_bi_graphemes, language=language, zh_type=zh_type)
     elif mode == "predict":
         max_t_count = datagen.get_max_seq_length(partition="test")
         max_label_length = \
-            datagen.get_max_label_length(partition="test", is_bi_graphemes=is_bi_graphemes)
+            datagen.get_max_label_length(partition="test", is_bi_graphemes=is_bi_graphemes, language=language, zh_type=zh_type)
 
     args.config.set('arch', 'max_t_count', str(max_t_count))
     args.config.set('arch', 'max_label_length', str(max_label_length))
@@ -350,7 +351,7 @@ if __name__ == '__main__':
                        label_shapes=data_train.provide_label,
                        for_training=True)
             _, arg_params, aux_params = mx.model.load_checkpoint(model_path, model_num_epoch)
-            model.set_params(arg_params, aux_params)
+            model.set_params(arg_params, aux_params, allow_missing=True)
             model_loaded = model
         else:
             model_loaded.bind(for_training=False, data_shapes=data_train.provide_data,
