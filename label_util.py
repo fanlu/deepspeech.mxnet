@@ -133,7 +133,7 @@ class LabelUtil:
 
 if __name__ == "__main__":
     labelUtil = LabelUtil.getInstance()
-    from stt_phone_util import generate_phone_dictionary, generate_phone_label, generate_word_dictionary, generate_zi_label
+    from stt_phone_util import generate_phone_dictionary, generate_phone_label, generate_word_dictionary, generate_zi_label, generate_py_dictionary, generate_py_label
     # generate_phone_dictionary()
 
     # labelUtil.load_unicode_set("resources/unicodemap_phone.csv")

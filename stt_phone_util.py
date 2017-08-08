@@ -38,7 +38,7 @@ def generate_py_label(label):
 def generate_py_dictionary(label_list):
   f = OrderedDict()
   for label in label_list:
-    str_ = label.strip()
+    str_ = label.strip().split(' ')
     for ch in str_:
       if ch != u' ':
           f[ch] = 1
