@@ -3,7 +3,7 @@ from collections import Counter
 
 _data_path = "/export/fanlu/speech-to-text-wavenet/asset/data/"
 
-_data_path = "/Users/lonica/Downloads/resource_aishell/"
+#_data_path = "/Users/lonica/Downloads/resource_aishell/"
 
 
 def split_every(n, label):

@@ -1,6 +1,6 @@
 import mxnet as mx
 import numpy as np
-
+import editdistance
 from label_util import LabelUtil
 from log_util import LogUtil
 
@@ -50,7 +50,8 @@ class STTMetric(mx.metric.EvalMetric):
                     p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
                 p = pred_best(p)
 
-                l_distance = levenshtein_distance(l, p)
+                #l_distance = levenshtein_distance(l, p)
+		l_distance = editdistance.eval(l, p)
                 self.total_n_label += len(l)
                 self.total_l_dist += l_distance
                 this_cer = float(l_distance) / float(len(l))
@@ -61,12 +62,12 @@ class STTMetric(mx.metric.EvalMetric):
                     # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
                 self.num_inst += 1
                 self.sum_metric += this_cer
-                if self.is_epoch_end:
-                    loss = ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu))
-                    self.batch_loss += loss
-                    if self.is_logging:
-                        log.info("loss: %f " % loss)
-        self.total_ctc_loss += self.batch_loss
+                #if self.is_epoch_end:
+                #    loss = ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu))
+                #    self.batch_loss += loss
+                #    if self.is_logging:
+                #        log.info("loss: %f " % loss)
+        self.total_ctc_loss += 0 # self.batch_loss
     def get_batch_loss(self):
         return self.batch_loss
     def get_name_value(self):

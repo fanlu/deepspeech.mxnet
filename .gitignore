@@ -1,4 +1,7 @@
 *.pyc
 *.json
 .idea
-log
+*log
+checkpoints/*.states
+checkpoints/*.params
+checkpoints/*.json
