@@ -171,7 +171,7 @@ def pinyin_2_phone():
 
 def word_2_pinyin(file_path):
   lines = open(file_path).readlines()
-  with open("resources/"+file_path.rsplit("/")[1]+"_py.txt", 'w') as out_file:
+  with open("resources/"+file_path.rsplit("/")[1].split(".")[0]+"_py.json", 'w') as out_file:
     for line in lines:
       d = json.loads(line)
       word = d.get("text")
@@ -181,9 +181,13 @@ def word_2_pinyin(file_path):
       # pypinyin.pinyin(word, style=pypinyin.FINALS_TONE3)
       py = pypinyin.pinyin(text2.decode('utf-8'), style=pypinyin.TONE3)
       pys = " ".join([i[0] for i in py if i[0] != " "])
-      print(pys)
+      #print(pys)
       out = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + str(d.get("duration")) + ", \"text\":\"" + pys + "\"}"
-      out_file.write(out + "\n")
+      try:
+        out_file.write(out + "\n")
+      except:
+        print(out)
+        continue
 
 
 def main(data_directory, output_file):
@@ -327,4 +331,4 @@ if __name__ == '__main__':
   
   #py_2_phone()
   #zi_2_phone()
-  word_2_pinyin('resources/aishell_train.json')
+  word_2_pinyin('resources/aishell_validation.json')

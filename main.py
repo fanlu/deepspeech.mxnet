@@ -105,10 +105,10 @@ def load_data(args):
                 generate_phone_dictionary()
         elif language == "zh" and zh_type == "zi":
             if not os.path.isfile("resources/unicodemap_zi.csv") or overwrite_bi_graphemes_dictionary:
-                generate_word_dictionary(datagen.train_texts + datagen.val_texts + datagen.test_texts)
+                generate_word_dictionary(datagen.train_texts + datagen.val_texts)
         elif language == "zh" and zh_type == "py":
             if not os.path.isfile("resources/unicodemap_py.csv") or overwrite_bi_graphemes_dictionary:
-                generate_py_dictionary(datagen.train_texts + datagen.val_texts + datagen.test_texts)
+                generate_py_dictionary(datagen.train_texts + datagen.val_texts)
         load_labelutil(labelUtil=labelUtil, is_bi_graphemes=is_bi_graphemes, language=language, zh_type=zh_type)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
 
