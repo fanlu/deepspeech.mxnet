@@ -44,8 +44,11 @@ def generate_py_dictionary(label_list):
           f[ch] = 1
   with open('resources/unicodemap_py.csv', 'w') as py_label:
     pywriter = csv.writer(py_label, delimiter=',')
+    baidu_labels = list('\' abcdefghijklmnopqrstuvwxyz')
+    for index, key in enumerate(baidu_labels):
+      pywriter.writerow((key, index + 1))
     for index, key in enumerate(f.keys()):
-      pywriter.writerow((key, index))
+      pywriter.writerow((key, index+len(baidu_labels)+1))
 
 def generate_zi_label(label):
   try:
