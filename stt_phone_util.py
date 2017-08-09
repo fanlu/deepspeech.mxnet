@@ -2,7 +2,7 @@ import csv
 from collections import Counter
 from collections import OrderedDict
 
-_data_path = "/export/fanlu/speech-to-text-wavenet/asset/data/"
+_data_path = "./resources/"
 
 # _data_path = "/Users/lonica/Downloads/resource_aishell/"
 

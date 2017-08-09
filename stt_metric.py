@@ -2,7 +2,7 @@ import socket
 
 import mxnet as mx
 import numpy as np
-import editdistance
+#import editdistance
 from label_util import LabelUtil
 from log_util import LogUtil
 
