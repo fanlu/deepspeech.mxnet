@@ -23,6 +23,8 @@ class BucketSTTIter(mx.io.DataIter):
     def __init__(self, count, datagen, batch_size, num_label, init_states, seq_length, width, height,
                  sort_by_duration=True,
                  is_bi_graphemes=False,
+                 language="zh",
+                 zh_type="zi",
                  partition="train",
                  buckets=[],
                  save_feature_as_csvfile=False
@@ -41,6 +43,8 @@ class BucketSTTIter(mx.io.DataIter):
         self.datagen = datagen
         self.label = None
         self.is_bi_graphemes = is_bi_graphemes
+        self.language = language
+        self.zh_type = zh_type
         # self.partition = datagen.partition
         if partition == 'train':
             durations = datagen.train_durations
@@ -129,12 +133,16 @@ class BucketSTTIter(mx.io.DataIter):
             data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True,
                                                       is_bi_graphemes=self.is_bi_graphemes,
                                                       seq_length=self.buckets[i],
-                                                      save_feature_as_csvfile=self.save_feature_as_csvfile)
+                                                      save_feature_as_csvfile=self.save_feature_as_csvfile,
+                                                      language=self.language,
+                                                      zh_type=self.zh_type)
         else:
             data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=False,
                                                       is_bi_graphemes=self.is_bi_graphemes,
                                                       seq_length=self.buckets[i],
-                                                      save_feature_as_csvfile=self.save_feature_as_csvfile)
+                                                      save_feature_as_csvfile=self.save_feature_as_csvfile,
+                                                      language=self.language,
+                                                      zh_type=self.zh_type)
 
         data_all = [mx.nd.array(data_set['x'])] + self.init_state_arrays
         label_all = [mx.nd.array(data_set['y'])]

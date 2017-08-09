@@ -173,6 +173,8 @@ def load_data(args):
                                     height=whcs.height,
                                     sort_by_duration=sort_by_duration,
                                     is_bi_graphemes=is_bi_graphemes,
+                                    language=language,
+                                    zh_type=zh_type,
                                     buckets=buckets,
                                     save_feature_as_csvfile=save_feature_as_csvfile)
     else:
@@ -202,6 +204,8 @@ def load_data(args):
                                               height=whcs.height,
                                               sort_by_duration=False,
                                               is_bi_graphemes=is_bi_graphemes,
+                                              language=language,
+                                              zh_type=zh_type,
                                               buckets=buckets,
                                               save_feature_as_csvfile=save_feature_as_csvfile)
         else:
