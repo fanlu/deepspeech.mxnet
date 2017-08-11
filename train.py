@@ -78,7 +78,8 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     n_epoch=begin_epoch
     is_bucketing = args.config.getboolean('arch', 'is_bucketing')
 
-    # a = mx.kv.create(kvstore_option)
+    # kv = mx.kv.create(kvstore_option)
+    # data = mx.io.ImageRecordIter(num_parts=kv.num_workers, part_index=kv.rank)
     # # a.set_optimizer(optimizer)
     # updater = mx.optimizer.get_updater(optimizer)
     # a._set_updater(updater=updater)

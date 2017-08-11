@@ -2,9 +2,8 @@
 *.json
 .idea
 *log
-checkpoints/*.states
-checkpoints/*.params
-checkpoints/*.json
+checkpoints/*
 *.wav
 *.speex
 *.swp
+resources/*.csv

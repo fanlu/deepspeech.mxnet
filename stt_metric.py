@@ -59,9 +59,9 @@ class STTMetric(mx.metric.EvalMetric):
         self.total_l_dist += l_distance
         this_cer = float(l_distance) / float(len(l))
         if self.is_logging:
-          log.info("label: %s " % (labelUtil.convert_num_to_word(l)))
-          log.info("pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-            labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+          log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
+          log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
+            host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
           # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
         self.num_inst += 1
         self.sum_metric += this_cer
@@ -76,7 +76,7 @@ class STTMetric(mx.metric.EvalMetric):
     return self.batch_loss
 
   def get_name_value(self):
-    total_cer = float(self.total_l_dist) / float(self.total_n_label)
+    total_cer = float(self.total_l_dist) / (float(self.total_n_label) if self.total_n_label > 0 else 0.001)
 
     return total_cer, self.total_n_label, self.total_l_dist, self.total_ctc_loss
 

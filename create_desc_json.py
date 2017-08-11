@@ -314,15 +314,15 @@ def zi_2_phone():
 
 
 if __name__ == '__main__':
-  # parser = argparse.ArgumentParser()
-  # parser.add_argument('data_directory', type=str,
-  #                     help='Path to data directory')
-  # parser.add_argument('output_file', type=str,
-  #                     help='Path to output file')
-  # args = parser.parse_args()
-  # main(args.data_directory, args.output_file)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('data_directory', type=str,
+                      help='Path to data directory')
+  parser.add_argument('output_file', type=str,
+                      help='Path to output file')
+  args = parser.parse_args()
+  # aishell(args.data_directory, args.output_file)
 
-  # aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
+  aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
 
   #read_lexicon()
   #print(len(word_2_lexicon))
@@ -331,4 +331,4 @@ if __name__ == '__main__':
   
   #py_2_phone()
   #zi_2_phone()
-  word_2_pinyin('resources/aishell_validation.json')
+  # word_2_pinyin('resources/aishell_validation.json')
