@@ -313,17 +313,24 @@ def zi_2_phone():
   out_file.close()
 
 
+def split_file_2_multi(input, num):
+  path, name = input.rsplit("/")
+  name_pre, name_post = name.split(".")
+  for i, line in enumerate(open(input).readlines()):
+    with open('%s/%s_%d.json' % (path, name_pre, (i % num)), 'a+') as tmp:
+      tmp.write(line)
+
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser()
-  parser.add_argument('data_directory', type=str,
-                      help='Path to data directory')
-  parser.add_argument('output_file', type=str,
-                      help='Path to output file')
-  args = parser.parse_args()
-  # aishell(args.data_directory, args.output_file)
-
-  aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
-
+  # parser = argparse.ArgumentParser()
+  # parser.add_argument('data_directory', type=str,
+  #                     help='Path to data directory')
+  # parser.add_argument('output_file', type=str,
+  #                     help='Path to output file')
+  # args = parser.parse_args()
+  # # aishell(args.data_directory, args.output_file)
+  #
+  # aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
+  split_file_2_multi("resources/aishell_train.json", 3)
   #read_lexicon()
   #print(len(word_2_lexicon))
   #ai_2_word()
