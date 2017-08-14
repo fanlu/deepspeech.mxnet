@@ -5,6 +5,7 @@ import numpy as np
 #import editdistance
 from label_util import LabelUtil
 from log_util import LogUtil
+from ctc_beam_search_decoder import ctc_beam_search_decoder
 
 
 def check_label_shapes(labels, preds, shape=0):
@@ -49,9 +50,20 @@ class STTMetric(mx.metric.EvalMetric):
       for i in range(int(int(self.batch_size) / int(self.num_gpu))):
         l = remove_blank(label[i])
         p = []
+        probs = []
         for k in range(int(seq_length)):
           p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
-        p = pred_best(p)
+          probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
+
+        beam_result = ctc_beam_search_decoder(
+          probs_seq=probs,
+          beam_size=10,
+          vocabulary=range(len(probs[0])-1),
+          blank_id=0,
+          cutoff_prob=1.0,
+        )
+        # p = pred_best(p)
+        p = beam_result[0][1]
 
         l_distance = levenshtein_distance(l, p)
         # l_distance = editdistance.eval(l, p)
