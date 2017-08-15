@@ -74,6 +74,8 @@ def ctc_beam_search_decoder(probs_seq,
     prob_idx = list(enumerate(probs_seq[time_step]))
     cutoff_len = len(prob_idx)
     # If pruning is enabled
+    # import time
+    # st = time.time()
     if cutoff_prob < 1.0:
       prob_idx = sorted(prob_idx, key=lambda asd: asd[1], reverse=True)
       cutoff_len, cum_prob = 0, 0.0
@@ -81,9 +83,11 @@ def ctc_beam_search_decoder(probs_seq,
         cum_prob += prob_idx[i][1]
         cutoff_len += 1
         if cum_prob >= cutoff_prob:
+          # print(cutoff_len)
           break
       prob_idx = prob_idx[0:cutoff_len]
-
+    # elapse = time.time() - st
+    # print("elapsed time %d" % elapse)
     for l in prefix_set_prev:
       if not prefix_set_next.has_key(l):
         probs_b_cur[l], probs_nb_cur[l] = 0.0, 0.0
@@ -97,7 +101,10 @@ def ctc_beam_search_decoder(probs_seq,
             probs_b_prev[l] + probs_nb_prev[l])
         else:
           last_char = l[-1]
-          new_char = vocabulary[c]
+          try:
+            new_char = vocabulary[c]
+          except:
+            print(c)
           l_plus = l + new_char
           if not prefix_set_next.has_key(l_plus):
             probs_b_cur[l_plus], probs_nb_cur[l_plus] = 0.0, 0.0

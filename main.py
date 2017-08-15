@@ -11,7 +11,7 @@ from label_util import LabelUtil
 from log_util import LogUtil
 import numpy as np
 from stt_datagenerator import DataGenerator
-from stt_metric import STTMetric
+from stt_metric import STTMetric, EvalSTTMetric
 from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
 from stt_phone_util import generate_phone_dictionary, generate_word_dictionary, generate_py_dictionary
 from stt_bucketing_module import STTBucketingModule
@@ -361,7 +361,7 @@ if __name__ == '__main__':
             model_loaded.bind(for_training=False, data_shapes=data_train.provide_data,
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
-        eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu)
+        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu)
         if is_batchnorm:
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)

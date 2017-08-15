@@ -6,5 +6,5 @@ checkpoints/*
 *.wav
 *.speex
 *.swp
-resources/*
+resources/**/*
 .DS_Store

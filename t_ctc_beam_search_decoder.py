@@ -25,10 +25,10 @@ def generate_probs1():
 
 
 def t_beam_search_decoder():
-  max_time_steps = 50
+  max_time_steps = 200
   probs_dim = len(vocab_list) + 1
-  beam_size = 10
-  num_results_per_sample = 5
+  beam_size = 1
+  num_results_per_sample = 1
 
   input_prob_matrix_0 = np.asarray(generate_probs(max_time_steps, probs_dim), dtype=np.float32)
   # input_prob_matrix_0 = np.asarray(generate_probs1(), dtype=np.float32)
@@ -62,7 +62,7 @@ def t_beam_search_decoder():
     beam_size=beam_size,
     vocabulary=vocab_list,
     blank_id=len(vocab_list),
-    cutoff_prob=1.0,
+    cutoff_prob=0.9,
   )
 
   # run log- CTC beam search decoder
@@ -84,6 +84,15 @@ def t_beam_search_decoder():
 
   tf_result_g = ''.join([vocab_list[i] for i in tf_decoded_g[0].values])
   print("greedy search '%s'" % tf_result_g)
+  # import torch
+  # import pytorch_ctc
+  #
+  # scorer = pytorch_ctc.Scorer()
+  # decoder = pytorch_ctc.CTCBeamDecoder(scorer, vocab_list, top_paths=3, beam_width=20,
+  #                          blank_index=0, space_index=28, merge_repeated=False)
+  #
+  # output, score, out_seq_len = decoder.decode(input_prob_matrix_0, sizes=None)
+  # print(output, score, out_seq_len)
 
 if __name__ == '__main__':
   t_beam_search_decoder()

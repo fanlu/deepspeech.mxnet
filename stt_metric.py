@@ -50,21 +50,9 @@ class STTMetric(mx.metric.EvalMetric):
       for i in range(int(int(self.batch_size) / int(self.num_gpu))):
         l = remove_blank(label[i])
         p = []
-        probs = []
         for k in range(int(seq_length)):
           p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
-          probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
-
-        beam_result = ctc_beam_search_decoder(
-          probs_seq=probs,
-          beam_size=10,
-          vocabulary=range(len(probs[0])-1),
-          blank_id=0,
-          cutoff_prob=1.0,
-        )
-        # p = pred_best(p)
-        p = beam_result[0][1]
-
+        p = pred_best(p)
         l_distance = levenshtein_distance(l, p)
         # l_distance = editdistance.eval(l, p)
         self.total_n_label += len(l)
@@ -119,15 +107,31 @@ class EvalSTTMetric(STTMetric):
     pred = pred.asnumpy()
     seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
 
-    l = remove_blank(label[0])
-    p = []
-    for k in range(int(seq_length)):
-      p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu))]))
-    p = pred_best(p)
-    res_str = labelUtil.convert_num_to_word(p)
-
-    self.total_ctc_loss += self.batch_loss
-    self.placeholder = res_str
+    for i in range(int(int(self.batch_size) / int(self.num_gpu))):
+      l = remove_blank(label[0])
+      p = []
+      probs = []
+      for k in range(int(seq_length)):
+        p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
+        probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
+      p = pred_best(p)
+      print(probs)
+      import time
+      st = time.time()
+      beam_result = ctc_beam_search_decoder(
+        probs_seq=probs,
+        beam_size=1,
+        vocabulary=labelUtil.byChar.keys(),
+        blank_id=0,
+        cutoff_prob=1.0,
+      )
+      st1 = time.time() - st
+      res_str = beam_result[0][1]
+      print("%d:%s" % (st1, res_str))
+      res_str1 = labelUtil.convert_num_to_word(p)
+      print("%s" % res_str1)
+      self.total_ctc_loss += self.batch_loss
+      self.placeholder = res_str
 
 
 def pred_best(p):
