@@ -65,7 +65,7 @@ def ctc_beam_search_decoder(probs_seq,
   probs_b_prev, probs_nb_prev = {'\t': 1.0}, {'\t': 0.0}
 
   ## extend prefix in loop
-  for time_step in xrange(len(probs_seq)):
+  for time_step in range(len(probs_seq)):
     # prefix_set_next: the set containing candidate prefixes
     # probs_b_cur: prefixes' probability ending with blank in current step
     # probs_nb_cur: prefixes' probability ending with non-blank in current step
@@ -79,7 +79,7 @@ def ctc_beam_search_decoder(probs_seq,
     if cutoff_prob < 1.0:
       prob_idx = sorted(prob_idx, key=lambda asd: asd[1], reverse=True)
       cutoff_len, cum_prob = 0, 0.0
-      for i in xrange(len(prob_idx)):
+      for i in range(len(prob_idx)):
         cum_prob += prob_idx[i][1]
         cutoff_len += 1
         if cum_prob >= cutoff_prob:
@@ -89,11 +89,11 @@ def ctc_beam_search_decoder(probs_seq,
     # elapse = time.time() - st
     # print("elapsed time %d" % elapse)
     for l in prefix_set_prev:
-      if not prefix_set_next.has_key(l):
+      if not l in prefix_set_next:
         probs_b_cur[l], probs_nb_cur[l] = 0.0, 0.0
 
       # extend prefix by travering prob_idx
-      for index in xrange(cutoff_len):
+      for index in range(cutoff_len):
         c, prob_c = prob_idx[index][0], prob_idx[index][1]
 
         if c == blank_id:
@@ -102,11 +102,11 @@ def ctc_beam_search_decoder(probs_seq,
         else:
           last_char = l[-1]
           try:
-            new_char = vocabulary[c]
+            new_char = vocabulary[c + 1]
           except:
             print(c)
           l_plus = l + new_char
-          if not prefix_set_next.has_key(l_plus):
+          if not l_plus in prefix_set_next:
             probs_b_cur[l_plus], probs_nb_cur[l_plus] = 0.0, 0.0
 
           if new_char == last_char:
@@ -133,7 +133,7 @@ def ctc_beam_search_decoder(probs_seq,
 
     ## store top beam_size prefixes
     prefix_set_prev = sorted(
-      prefix_set_next.iteritems(), key=lambda asd: asd[1], reverse=True)
+      prefix_set_next.items(), key=lambda asd: asd[1], reverse=True)
     if beam_size < len(prefix_set_prev):
       prefix_set_prev = prefix_set_prev[:beam_size]
     prefix_set_prev = dict(prefix_set_prev)
@@ -229,22 +229,22 @@ def ctc_beam_search_decoder_log(probs_seq,
     if cutoff_prob < 1.0:
       prob_idx = sorted(prob_idx, key=lambda asd: asd[1], reverse=True)
       cutoff_len, cum_prob = 0, 0.0
-      for i in xrange(len(prob_idx)):
+      for i in range(len(prob_idx)):
         cum_prob += prob_idx[i][1]
         cutoff_len += 1
         if cum_prob >= cutoff_prob:
           break
       prob_idx = prob_idx[0:cutoff_len]
     # convert prob into log-prob
-    log_prob_idx = [(prob_idx[i][0], log(prob_idx[i][1])) for i in xrange(cutoff_len)]
+    log_prob_idx = [(prob_idx[i][0], log(prob_idx[i][1])) for i in range(cutoff_len)]
 
     for l in prefix_set_prev:
-      if not prefix_set_next.has_key(l):
+      if not l in prefix_set_next:
         log_probs_b_cur[l], log_probs_nb_cur[l] = FLT64_MIN, FLT64_MIN
 
       # extend prefix by travering vocabulary
       # for c in range(0, probs_dim):
-      for index in xrange(cutoff_len):
+      for index in range(cutoff_len):
         c, log_prob_c = log_prob_idx[index][0], log_prob_idx[index][1]
         if c == blank_id:
           log_probs_prev = log_sum_exp(log_probs_b_prev[l], log_probs_nb_prev[l])
@@ -254,7 +254,7 @@ def ctc_beam_search_decoder_log(probs_seq,
           last_char = l[-1]
           new_char = vocabulary[c]
           l_plus = l + new_char
-          if not prefix_set_next.has_key(l_plus):
+          if not l_plus in prefix_set_next:
             log_probs_b_cur[l_plus], log_probs_nb_cur[l_plus] = FLT64_MIN, FLT64_MIN
 
           if new_char == last_char:
@@ -282,7 +282,7 @@ def ctc_beam_search_decoder_log(probs_seq,
 
     ## store top beam_size prefixes
     prefix_set_prev = sorted(
-      prefix_set_next.iteritems(), key=lambda asd: asd[1], reverse=True)
+      prefix_set_next.items(), key=lambda asd: asd[1], reverse=True)
     if beam_size < len(prefix_set_prev):
       prefix_set_prev = prefix_set_prev[:beam_size]
     prefix_set_prev = dict(prefix_set_prev)

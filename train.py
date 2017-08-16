@@ -186,5 +186,6 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         n_epoch += 1
 
         lr_scheduler.learning_rate=learning_rate/learning_rate_annealing
+        log.info("lr is %.7f" % lr_scheduler.learning_rate)
 
     log.info('FINISH')

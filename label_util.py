@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-
 import csv
-
+from io import open
 from log_util import LogUtil
 from singleton import Singleton
 
 
-@Singleton
-class LabelUtil:
+class LabelUtil(Singleton):
     _log = None
 
     # dataPath
@@ -20,13 +18,13 @@ class LabelUtil:
         self.byIndex = {}
         self.unicodeFilePath = unicodeFilePath
 
-        with open(unicodeFilePath) as data_file:
-            data_file = csv.reader(data_file, delimiter=',')
+        with open(unicodeFilePath, 'rt', encoding='UTF-8') as data_file:
 
             self.count = 0
-            for r in data_file:
-                self.byChar[r[0]] = int(r[1])
-                self.byIndex[int(r[1])] = r[0]
+            for i, r in enumerate(data_file):
+                ch, inx = r.strip().rsplit(",", 1)
+                self.byChar[ch] = int(inx)
+                self.byIndex[int(inx)] = ch
                 self.count += 1
 
 
@@ -86,7 +84,7 @@ class LabelUtil:
                 if char == "":
                     pass
                 else:
-                    label_num.append(int(self.byChar[char]))
+                    label_num.append(int(self.byChar[char.decode("utf-8")]))
 
             # tuple typecast: read only, faster
             return tuple(label_num)
@@ -132,7 +130,7 @@ class LabelUtil:
 
 
 if __name__ == "__main__":
-    labelUtil = LabelUtil.getInstance()
+    labelUtil = LabelUtil()
     from stt_phone_util import generate_phone_dictionary, generate_phone_label, generate_word_dictionary, generate_zi_label, generate_py_dictionary, generate_py_label
     # generate_phone_dictionary()
 

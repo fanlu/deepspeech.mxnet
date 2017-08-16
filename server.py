@@ -27,10 +27,7 @@ import wave
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import create_desc_json
 
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
+from io import BytesIO
 
 # os.environ['MXNET_ENGINE_TYPE'] = "NaiveEngine"
 os.environ['MXNET_ENGINE_TYPE'] = "ThreadedEnginePerDevice"
@@ -81,7 +78,7 @@ def load_data(args):
   language = args.config.get('data', 'language')
 
   log = LogUtil().getlogger()
-  labelUtil = LabelUtil.getInstance()
+  labelUtil = LabelUtil()
 
   test_json = "resources/d.json"
   datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
@@ -153,7 +150,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                'CONTENT_TYPE': self.headers['Content-Type'],
                })
     filename = form['file'].filename
-    print "filename is: " + str(filename)
+    print("filename is: " + str(filename))
 
     if filename.endswith(".speex"):
       part1, part2 = filename.split(".")
@@ -161,7 +158,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       open("./" + filename, "wb").write(data)
       command = "./SpeexDecode " + filename + " " + part1 + ".wav"
       os.system(command)
-      data = file(part1 + ".wav").read()
+      data = open(part1 + ".wav", 'rb').read()
       open("./lolol.wav", "wb").write(data)
 
     elif filename.endswith(".wav"):
@@ -295,8 +292,8 @@ class Net(object):
     for nbatch, data_batch in enumerate(self.data_train):
       model_loaded.forward(data_batch, is_train=False)
       model_loaded.update_metric(eval_metric, data_batch.label)
-      print "my res is:"
-      print eval_metric.placeholder
+      print("my res is:")
+      print(eval_metric.placeholder)
       return eval_metric.placeholder
 
   def printStuff(self):
@@ -307,7 +304,7 @@ otherNet = Net()
 
 if __name__ == '__main__':
   server = HTTPServer(('', 8088), SimpleHTTPRequestHandler)
-  print 'Started httpserver on port'
+  print('Started httpserver on port')
 
   # Wait forever for incoming htto requests
   server.serve_forever()

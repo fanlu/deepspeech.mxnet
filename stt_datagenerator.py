@@ -1,9 +1,11 @@
+# coding=utf-8
+
 from __future__ import absolute_import, division, print_function
 
 import json
 import random
 import socket
-
+from io import open
 import numpy as np
 from stt_utils import calc_feat_dim, spectrogram_from_file
 
@@ -78,7 +80,7 @@ class DataGenerator(object):
     logger.info('Reading description file: {} for partition: {}'
                 .format(desc_file, partition))
     audio_paths, durations, texts = [], [], []
-    with open(desc_file) as json_line_file:
+    with open(desc_file, 'rt', encoding='UTF-8') as json_line_file:
       for line_num, json_line in enumerate(json_line_file):
         try:
           spec = json.loads(json_line)
@@ -185,7 +187,7 @@ class DataGenerator(object):
     else:
       x = np.zeros((mb_size, seq_length, feature_dim))
     y = np.zeros((mb_size, self.max_label_length))
-    labelUtil = LabelUtil.getInstance()
+    labelUtil = LabelUtil()
     label_lengths = []
     for i in range(mb_size):
       feat = features[i]

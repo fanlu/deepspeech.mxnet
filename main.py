@@ -89,7 +89,7 @@ def load_data(args):
     language = args.config.get('data', 'language')
 
     log = LogUtil().getlogger()
-    labelUtil = LabelUtil.getInstance()
+    labelUtil = LabelUtil()
     if mode == "train" or mode == "load":
         data_json = args.config.get('data', 'train_json')
         val_json = args.config.get('data', 'val_json')

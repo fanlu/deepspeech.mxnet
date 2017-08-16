@@ -7,9 +7,9 @@ from label_util import LabelUtil
 from log_util import LogUtil
 from ctc_beam_search_decoder import ctc_beam_search_decoder
 
-# import tensorflow as tf
-# from tensorflow.python.framework import ops
-# from tensorflow.python.ops import array_ops
+import tensorflow as tf
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import array_ops
 
 
 def check_label_shapes(labels, preds, shape=0):
@@ -42,7 +42,7 @@ class STTMetric(mx.metric.EvalMetric):
     check_label_shapes(labels, preds)
     if self.is_logging:
       log = LogUtil().getlogger()
-      labelUtil = LabelUtil.getInstance()
+      labelUtil = LabelUtil()
     self.batch_loss = 0.
     host_name = socket.gethostname()
     for label, pred in zip(labels, preds):
@@ -102,7 +102,7 @@ class EvalSTTMetric(STTMetric):
     check_label_shapes(labels, preds)
     if self.is_logging:
       log = LogUtil().getlogger()
-      labelUtil = LabelUtil.getInstance()
+      labelUtil = LabelUtil()
     self.batch_loss = 0.
     shouldPrint = True
     res_str = ""
@@ -110,13 +110,13 @@ class EvalSTTMetric(STTMetric):
     label = label.asnumpy()
     pred = pred.asnumpy()
     seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
-
+    sess = tf.Session()
     for i in range(int(int(self.batch_size) / int(self.num_gpu))):
       l = remove_blank(label[0])
       p = []
       probs = []
       for k in range(int(seq_length)):
-        p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
+        p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]) + 1)
         probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
       p = pred_best(p)
       # print(probs)
@@ -124,41 +124,40 @@ class EvalSTTMetric(STTMetric):
       st = time.time()
       beam_result = ctc_beam_search_decoder(
         probs_seq=probs,
-        beam_size=10,
+        beam_size=3,
         vocabulary=labelUtil.byIndex,
         blank_id=0,
         cutoff_prob=0.9,
       )
       st1 = time.time() - st
       res_str = beam_result[0][1]
-      print("%d:%s" % (st1, res_str))
+      print("%.2f, %s" % (st1, res_str))
       res_str1 = labelUtil.convert_num_to_word(p)
-      print("%s" % res_str1)
+      # print("%s" % res_str1)
 
-      # max_time_steps = seq_length
-      # input_log_prob_matrix_0 = np.log(probs)  # + 2.0
-      #
-      # # len max_time_steps array of batch_size x depth matrices
-      # inputs = ([
-      #   input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
-      # )
-      #
-      # inputs_t = [ops.convert_to_tensor(x) for x in inputs]
-      # inputs_t = array_ops.stack(inputs_t)
-      #
-      # st = time.time()
-      # # run CTC beam search decoder in tensorflow
-      # with tf.Session() as sess:
-      #   decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
-      #                                                              [max_time_steps],
-      #                                                              beam_width=10,
-      #                                                              top_paths=1,
-      #                                                              merge_repeated=False)
-      #   tf_decoded = sess.run(decoded)
-      #   # tf_log_probs = sess.run([log_probabilities])
-      # st1 = time.time() - st
-      # tf_result = ''.join([labelUtil.byIndex.get(i, ' ') for i in tf_decoded[0].values])
-      # print("%d, %s" % (st1, tf_result))
+      max_time_steps = int(seq_length)
+      input_log_prob_matrix_0 = np.log(probs)  # + 2.0
+
+      # len max_time_steps array of batch_size x depth matrices
+      inputs = ([
+        input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
+      )
+
+      inputs_t = [ops.convert_to_tensor(x) for x in inputs]
+      inputs_t = array_ops.stack(inputs_t)
+
+      st = time.time()
+      # run CTC beam search decoder in tensorflow
+      decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
+                                                                 [max_time_steps],
+                                                                 beam_width=3,
+                                                                 top_paths=1,
+                                                                 merge_repeated=False)
+      tf_decoded = sess.run(decoded)
+        # tf_log_probs = sess.run([log_probabilities])
+      st1 = time.time() - st
+      tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[0].values])
+      print("%.2f, %s" % (st1, tf_result))
       self.total_ctc_loss += self.batch_loss
       self.placeholder = res_str
 
@@ -185,7 +184,7 @@ def remove_blank(l):
 
 
 def remove_space(l):
-  labelUtil = LabelUtil.getInstance()
+  labelUtil = LabelUtil()
   ret = []
   for i in range(len(l)):
     if l[i] != labelUtil.get_space_index():

@@ -1,6 +1,6 @@
 import logging
 import logging.handlers
-
+from singleton import Singleton
 
 class SingletonType(type):
     def __call__(cls, *args, **kwargs):
@@ -11,8 +11,7 @@ class SingletonType(type):
             return cls.__instance
 
 
-class LogUtil(object):
-    __metaclass__ = SingletonType
+class LogUtil(Singleton):
     _logger = None
     _filename = None
 
