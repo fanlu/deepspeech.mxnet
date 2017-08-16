@@ -7,6 +7,10 @@ from label_util import LabelUtil
 from log_util import LogUtil
 from ctc_beam_search_decoder import ctc_beam_search_decoder
 
+import tensorflow as tf
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import array_ops
+
 
 def check_label_shapes(labels, preds, shape=0):
   """Check to see if the two arrays are the same size."""
@@ -115,21 +119,46 @@ class EvalSTTMetric(STTMetric):
         p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
         probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
       p = pred_best(p)
-      print(probs)
+      # print(probs)
       import time
       st = time.time()
       beam_result = ctc_beam_search_decoder(
         probs_seq=probs,
-        beam_size=1,
-        vocabulary=labelUtil.byChar.keys(),
+        beam_size=10,
+        vocabulary=labelUtil.byIndex,
         blank_id=0,
-        cutoff_prob=1.0,
+        cutoff_prob=0.9,
       )
       st1 = time.time() - st
       res_str = beam_result[0][1]
       print("%d:%s" % (st1, res_str))
       res_str1 = labelUtil.convert_num_to_word(p)
       print("%s" % res_str1)
+
+      max_time_steps = seq_length
+      input_log_prob_matrix_0 = np.log(probs)  # + 2.0
+
+      # len max_time_steps array of batch_size x depth matrices
+      inputs = ([
+        input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
+      )
+
+      inputs_t = [ops.convert_to_tensor(x) for x in inputs]
+      inputs_t = array_ops.stack(inputs_t)
+
+      st = time.time()
+      # run CTC beam search decoder in tensorflow
+      with tf.Session() as sess:
+        decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
+                                                                   [max_time_steps],
+                                                                   beam_width=10,
+                                                                   top_paths=1,
+                                                                   merge_repeated=False)
+        tf_decoded = sess.run(decoded)
+        # tf_log_probs = sess.run([log_probabilities])
+      st1 = time.time() - st
+      tf_result = ''.join([labelUtil.byIndex.get(i, ' ') for i in tf_decoded[0].values])
+      print("%d, %s" % (st1, tf_result))
       self.total_ctc_loss += self.batch_loss
       self.placeholder = res_str
 

@@ -71,10 +71,9 @@ def dedupe(items):
 
 def generate_word_dictionary(label_list):
   f = OrderedDict()
-  f[' '] = 0
   for line in open(_data_path + '6855map.txt').readlines():
     r = line.strip().split(" ")
-    f[r[1].decode('utf-8')] = int(r[0]) + 1
+    f[r[1].decode('utf-8')] = int(r[0])
   for label in label_list:
     try:
       str_ = label.strip().decode('utf-8')
@@ -86,5 +85,5 @@ def generate_word_dictionary(label_list):
   with open('resources/unicodemap_zi.csv', 'w') as zi_label:
     ziwriter = csv.writer(zi_label, delimiter=',')
     for index, key in enumerate(f.keys()):
-      ziwriter.writerow((key.encode('utf-8'), index))
+      ziwriter.writerow((key.encode('utf-8'), index + 1))
 

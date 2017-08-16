@@ -8,3 +8,4 @@ checkpoints/*
 *.swp
 resources/**/*
 .DS_Store
+/resources/unicodemap_zi.csv
