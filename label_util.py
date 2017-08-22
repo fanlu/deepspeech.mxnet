@@ -84,7 +84,7 @@ class LabelUtil(Singleton):
                 if char == "":
                     pass
                 else:
-                    label_num.append(int(self.byChar[char.decode("utf-8")]))
+                    label_num.append(int(self.byChar[strQ2B(char.decode("utf-8"))]))
 
             # tuple typecast: read only, faster
             return tuple(label_num)
