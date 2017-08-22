@@ -63,7 +63,7 @@ class LabelUtil(Singleton):
                 if char == "":
                     pass
                 else:
-                    label_num.append(int(self.byChar[char]))
+                    label_num.append(int(self.byChar[strQ2B(char)]))
 
             # tuple typecast: read only, faster
             return tuple(label_num)
@@ -131,16 +131,18 @@ class LabelUtil(Singleton):
 
 if __name__ == "__main__":
     labelUtil = LabelUtil()
-    from stt_phone_util import generate_phone_dictionary, generate_phone_label, generate_word_dictionary, generate_zi_label, generate_py_dictionary, generate_py_label
+    from stt_phone_util import generate_phone_dictionary, generate_phone_label, generate_word_dictionary, generate_zi_label, generate_py_dictionary, generate_py_label, strQ2B
     # generate_phone_dictionary()
 
     # labelUtil.load_unicode_set("resources/unicodemap_phone.csv")
     # label = generate_phone_label("x ian4 ch eng2 j ing1 j i4 zh uang4 k uang4 b i3 j iao4 k un4 n an5")
     # label = labelUtil.convert_bi_graphemes_to_num(label)
 
-    generate_word_dictionary(["玥"])
+    print(strQ2B(u"ｔ恤"))
 
-    labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
-    label = generate_zi_label("而 对 楼市 成交 抑制 作用 最 大 的 限 购 玥")
-    label = labelUtil.convert_bi_graphemes_to_num(label)
-    print(label)
+    # generate_word_dictionary(["玥"])
+    #
+    # labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
+    # label = generate_zi_label("而 对 楼市 成交 抑制 作用 最 大 的 限 购 玥")
+    # label = labelUtil.convert_bi_graphemes_to_num(label)
+    # print(label)
