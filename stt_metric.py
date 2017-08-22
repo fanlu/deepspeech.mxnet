@@ -7,9 +7,9 @@ from label_util import LabelUtil
 from log_util import LogUtil
 from ctc_beam_search_decoder import ctc_beam_search_decoder
 
-import tensorflow as tf
-from tensorflow.python.framework import ops
-from tensorflow.python.ops import array_ops
+# import tensorflow as tf
+# from tensorflow.python.framework import ops
+# from tensorflow.python.ops import array_ops
 
 
 def check_label_shapes(labels, preds, shape=0):
@@ -110,7 +110,7 @@ class EvalSTTMetric(STTMetric):
     label = label.asnumpy()
     pred = pred.asnumpy()
     seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
-    sess = tf.Session()
+    # sess = tf.Session()
     for i in range(int(int(self.batch_size) / int(self.num_gpu))):
       l = remove_blank(label[0])
       p = []
@@ -138,29 +138,29 @@ class EvalSTTMetric(STTMetric):
       res_str1 = labelUtil.convert_num_to_word(p)
       # print("%s" % res_str1)
 
-      max_time_steps = int(seq_length)
-      input_log_prob_matrix_0 = np.log(probs)  # + 2.0
-
-      # len max_time_steps array of batch_size x depth matrices
-      inputs = ([
-        input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
-      )
-
-      inputs_t = [ops.convert_to_tensor(x) for x in inputs]
-      inputs_t = array_ops.stack(inputs_t)
-
-      st = time.time()
-      # run CTC beam search decoder in tensorflow
-      decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
-                                                                 [max_time_steps],
-                                                                 beam_width=10,
-                                                                 top_paths=3,
-                                                                 merge_repeated=False)
-      tf_decoded, tf_log_probs = sess.run([decoded, log_probabilities])
-      st1 = time.time() - st
-      for index in range(3):
-        tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
-        print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
+      # max_time_steps = int(seq_length)
+      # input_log_prob_matrix_0 = np.log(probs)  # + 2.0
+      #
+      # # len max_time_steps array of batch_size x depth matrices
+      # inputs = ([
+      #   input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
+      # )
+      #
+      # inputs_t = [ops.convert_to_tensor(x) for x in inputs]
+      # inputs_t = array_ops.stack(inputs_t)
+      #
+      # st = time.time()
+      # # run CTC beam search decoder in tensorflow
+      # decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
+      #                                                            [max_time_steps],
+      #                                                            beam_width=10,
+      #                                                            top_paths=3,
+      #                                                            merge_repeated=False)
+      # tf_decoded, tf_log_probs = sess.run([decoded, log_probabilities])
+      # st1 = time.time() - st
+      # for index in range(3):
+      #   tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
+      #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
       self.total_ctc_loss += self.batch_loss
       self.placeholder = res_str
 
