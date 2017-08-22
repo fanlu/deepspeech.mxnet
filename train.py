@@ -1,6 +1,8 @@
 import sys
 
 sys.path.insert(0, "../../python")
+
+from log_util import LogUtil
 import os.path
 import mxnet as mx
 import config_util
@@ -43,9 +45,34 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
         return self.learning_rate
 
 
+def _get_lr_scheduler(args, kv):
+    learning_rate = args.config.getfloat('train', 'learning_rate')
+    lr_factor = args.config.getfloat('train', 'lr_factor')
+    if lr_factor >= 1:
+        return (learning_rate, None)
+    epoch_size = args.num_examples / args.batch_size
+    if 'dist' in args.kv_store:
+        epoch_size /= kv.num_workers
+    mode = args.config.get('common', 'mode')
+    begin_epoch = 0
+    if mode == "load":
+        model_file = args.config.get('common', 'model_file')
+        begin_epoch = int(model_file.split("-")[1]) if len(model_file) == 16 else int(model_file.split("n_epoch")[1].split("n_batch")[0])
+    step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
+    for s in step_epochs:
+        if begin_epoch >= s:
+            learning_rate *= lr_factor
+    if learning_rate != args.config.getfloat('train', 'learning_rate'):
+        log = LogUtil().getlogger()
+        log.info('Adjust learning rate to %e for epoch %d' % (learning_rate, begin_epoch))
+
+    steps = [epoch_size * (x - begin_epoch) for x in step_epochs if x - begin_epoch > 0]
+    return (learning_rate, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
+
+
 def do_training(args, module, data_train, data_val, begin_epoch=0):
     from distutils.dir_util import mkpath
-    from log_util import LogUtil
+
     host_name = socket.gethostname()
     log = LogUtil().getlogger()
     mkpath(os.path.dirname(config_util.get_checkpoint_path(args)))
@@ -113,15 +140,16 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     if begin_epoch == 0 and mode == 'train':
         module.init_params(initializer=get_initializer(args))
 
-
+    kv = mx.kv.create(kvstore_option)
     lr_scheduler = SimpleLRScheduler(learning_rate=learning_rate)
+    # lr, lr_scheduler = _get_lr_scheduler(args, kv)
 
     def reset_optimizer(force_init=False):
         optimizer_params = {'lr_scheduler': lr_scheduler,
                             'clip_gradient': clip_gradient,
                             'wd': weight_decay}
         optimizer_params.update(optimizer_params_dictionary)
-        module.init_optimizer(kvstore=kvstore_option,
+        module.init_optimizer(kvstore=kv,
                               optimizer=optimizer,
                               optimizer_params=optimizer_params,
                               force_init=force_init)
@@ -184,8 +212,13 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
             save_checkpoint(module, prefix=config_util.get_checkpoint_path(args), epoch=n_epoch, save_optimizer_states=save_optimizer_states)
 
         n_epoch += 1
-
-        lr_scheduler.learning_rate=learning_rate/learning_rate_annealing
-        log.info("lr is %.7f" % lr_scheduler.learning_rate)
+        step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
+        if n_epoch >= 1:
+            learning_rate = 0.001
+        for s in step_epochs:
+            if begin_epoch >= s:
+                learning_rate *= 0.9
+        lr_scheduler.learning_rate=learning_rate
+        log.info("n_epoch %d's lr is %.7f" % (n_epoch, lr_scheduler.learning_rate))
 
     log.info('FINISH')

@@ -4,6 +4,8 @@ import librosa
 import os
 import glob
 import random
+
+import soundfile as sf
 from scipy.stats import randint as sp_randint
 from scipy.stats.distributions import uniform, norm
 from sklearn.model_selection import ParameterGrid, ParameterSampler
@@ -51,9 +53,16 @@ def augmentation(audiofile, param, outputfile):
   elif param.get('noise_file') == 2:
     noise_factor = param.get("noise_factor_white")
 
+  noisefile = noise_list[param.get("noise_file")]
+
+  aug(audiofile, noisefile, outputfile, noise_factor, param.get("speed_factor"))
+
+
+def aug(audiofile, noisefile, outputfile, noise_factor, speed_factor):
+
   sr1, data_clean = wav.read(audiofile)
 
-  noise_a = noise_list[param.get("noise_file")]
+  _, noise_a = wav.read(noisefile)
   noise_b = np.array(noise_a).astype(np.float32)
 
   noise_b /= np.max(noise_b)
@@ -62,11 +71,12 @@ def augmentation(audiofile, param, outputfile):
 
   max_holder = np.max(data_clean_a)
   data_clean_a /= np.max(data_clean_a)
-  result_a = data_clean_a + noise_factor * noise_b[2000:data_clean_a.shape[0] + 2000]
+  start = random.randint(1, noise_b.shape[0] - data_clean_a.shape[0] - 1)
+  result_a = data_clean_a + noise_factor * noise_b[start : data_clean_a.shape[0] + start]
   result_a *= max_holder
   # result_a = result_a.astype(np.int16)
 
-  y_stretch = librosa.effects.time_stretch(result_a, param.get("speed_factor"))
+  y_stretch = librosa.effects.time_stretch(result_a, speed_factor)
   y_stretch = y_stretch.astype(np.int16)
   print('Saving stretched audio to: ', outputfile)
   librosa.output.write_wav(outputfile, y_stretch, sr1)
@@ -157,17 +167,27 @@ if __name__ == "__main__":
   #   print(p)
   for w in wavs[100:105]:
     path, name = w.rsplit('/', 1)
-    for p in random_search():
-      outputfile = path + '/' + name.split('.')[0] + "-" + str(p.get("speed_factor")) + "-" + str(p.get('noise_file')) + '-'
-      if p.get('noise_file') == 0:
-        outputfile += str(p.get("noise_factor_cafe"))
-      elif p.get('noise_file') == 1:
-        outputfile += str(p.get("noise_factor_car"))
-      elif p.get('noise_file') == 2:
-        outputfile += str(p.get("noise_factor_white"))
-      outputfile += ".wav"
-      outputdir, _ = outputfile.rsplit('/', 1)
-      if not os.path.exists(outputdir):
-        os.mkdir(outputdir)
-      print(outputfile)
-      augmentation(w, p, outputfile)
+    outputfile = path + '/' + name.split('.')[0] + "-" + str(1) + "-" + 'work.wav'
+    aug(w, '/Users/lonica/Downloads/noise_work.wav', outputfile, 3, 1)
+
+    # with soundfile.SoundFile(w) as sound_file:
+    #   audio = sound_file.read(dtype='float32')
+    #
+    # _, wav_file = wav.read(w)
+    # w_f = np.array(wav_file).astype(np.float32)
+    #
+    # print(audio)
+    # for p in random_search():
+    #   outputfile = path + '/' + name.split('.')[0] + "-" + str(p.get("speed_factor")) + "-" + str(p.get('noise_file')) + '-'
+    #   if p.get('noise_file') == 0:
+    #     outputfile += str(p.get("noise_factor_cafe"))
+    #   elif p.get('noise_file') == 1:
+    #     outputfile += str(p.get("noise_factor_car"))
+    #   elif p.get('noise_file') == 2:
+    #     outputfile += str(p.get("noise_factor_white"))
+    #   outputfile += ".wav"
+    #   outputdir, _ = outputfile.rsplit('/', 1)
+    #   if not os.path.exists(outputdir):
+    #     os.mkdir(outputdir)
+    #   print(outputfile)
+    #   augmentation(w, p, outputfile)

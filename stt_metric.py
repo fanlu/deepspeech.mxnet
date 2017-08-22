@@ -121,6 +121,8 @@ class EvalSTTMetric(STTMetric):
       p = pred_best(p)
       # print(probs)
       import time
+      # import kenlm
+      # model = kenlm.Model('/Users/lonica/Downloads/sougou_2.binary')
       st = time.time()
       beam_result = ctc_beam_search_decoder(
         probs_seq=probs,
@@ -128,10 +130,11 @@ class EvalSTTMetric(STTMetric):
         vocabulary=labelUtil.byIndex,
         blank_id=0,
         cutoff_prob=0.9,
+        # ext_scoring_func=model.score
       )
       st1 = time.time() - st
       res_str = beam_result[0][1]
-      print("%.2f, %s" % (st1, res_str))
+      print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
       res_str1 = labelUtil.convert_num_to_word(p)
       # print("%s" % res_str1)
 
@@ -150,14 +153,14 @@ class EvalSTTMetric(STTMetric):
       # run CTC beam search decoder in tensorflow
       decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
                                                                  [max_time_steps],
-                                                                 beam_width=3,
-                                                                 top_paths=1,
+                                                                 beam_width=10,
+                                                                 top_paths=3,
                                                                  merge_repeated=False)
-      tf_decoded = sess.run(decoded)
-        # tf_log_probs = sess.run([log_probabilities])
+      tf_decoded, tf_log_probs = sess.run([decoded, log_probabilities])
       st1 = time.time() - st
-      tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[0].values])
-      print("%.2f, %s" % (st1, tf_result))
+      for index in range(3):
+        tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
+        print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
       self.total_ctc_loss += self.batch_loss
       self.placeholder = res_str
 

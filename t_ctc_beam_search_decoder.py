@@ -10,14 +10,14 @@ import time
 
 vocab_list = ['\'', ' '] + [chr(i) for i in range(97, 123)]
 
-# vocab_list = ['A']
+vocab_list = ['A']
 
 # vocab_list = ['\'', ' ']+[chr(i) for i in range(97, 123)]
 
 def generate_probs(num_time_steps, probs_dim):
   probs_mat = np.random.random(size=(num_time_steps, probs_dim))
-  # probs_mat = [probs_mat[index] / sum(probs_mat[index]) for index in range(num_time_steps)]
-  probs_mat = np.exp(probs_mat) / np.exp(probs_mat).sum(axis=1)[:, None]
+  probs_mat = [probs_mat[index] / sum(probs_mat[index]) for index in range(num_time_steps)]
+  # probs_mat = np.exp(probs_mat) / np.exp(probs_mat).sum(axis=1)[:, None]
   return probs_mat
 
 def generate_probs1():
@@ -25,13 +25,13 @@ def generate_probs1():
 
 
 def t_beam_search_decoder():
-  max_time_steps = 200
+  max_time_steps = 2
   probs_dim = len(vocab_list) + 1
-  beam_size = 1
+  beam_size = 2
   num_results_per_sample = 1
 
-  input_prob_matrix_0 = np.asarray(generate_probs(max_time_steps, probs_dim), dtype=np.float32)
-  # input_prob_matrix_0 = np.asarray(generate_probs1(), dtype=np.float32)
+  # input_prob_matrix_0 = np.asarray(generate_probs(max_time_steps, probs_dim), dtype=np.float32)
+  input_prob_matrix_0 = np.asarray(generate_probs1(), dtype=np.float32)
   print(input_prob_matrix_0)
   # Add arbitrary offset - this is fine
   input_log_prob_matrix_0 = np.log(input_prob_matrix_0)  # + 2.0
@@ -62,7 +62,7 @@ def t_beam_search_decoder():
     beam_size=beam_size,
     vocabulary=vocab_list,
     blank_id=len(vocab_list),
-    cutoff_prob=0.9,
+    cutoff_prob=1.0,
   )
 
   # run log- CTC beam search decoder
@@ -83,7 +83,7 @@ def t_beam_search_decoder():
           tf_result, beam_result[index][1], beam_result_log[index][1]))
 
   tf_result_g = ''.join([vocab_list[i] for i in tf_decoded_g[0].values])
-  print("greedy search '%s'" % tf_result_g)
+  print("greedy search %.2f '%s'" % (tf_log_probs_g[0][0], tf_result_g))
   # import torch
   # import pytorch_ctc
   #
