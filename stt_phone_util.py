@@ -106,6 +106,5 @@ def generate_word_dictionary(label_list):
             if ch != u' ':
                 f[strQ2B(ch)] = 1
     with open('resources/unicodemap_zi.csv', 'w') as zi_label:
-        ziwriter = csv.writer(zi_label, delimiter=',')
         for index, key in enumerate(f.keys()):
-            ziwriter.writerow((key.encode('utf-8'), index + 1))
+            zi_label.write("%s,%d\n" % (key.encode('utf-8'), index + 1))

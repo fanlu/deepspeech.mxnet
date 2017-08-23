@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     print(strQ2B(u"ｔ恤"))
 
-    # generate_word_dictionary(["玥"])
+    generate_word_dictionary(["玥"])
     #
     # labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
     # label = generate_zi_label("而 对 楼市 成交 抑制 作用 最 大 的 限 购 玥")

@@ -216,9 +216,10 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         if n_epoch >= 1:
             learning_rate = 0.001
         for s in step_epochs:
-            if begin_epoch >= s:
+            if n_epoch >= s:
                 learning_rate *= 0.9
         lr_scheduler.learning_rate=learning_rate
+        summary_writer.add_scalar('lr', lr_scheduler.learning_rate, n_epoch)
         log.info("n_epoch %d's lr is %.7f" % (n_epoch, lr_scheduler.learning_rate))
 
     log.info('FINISH')
