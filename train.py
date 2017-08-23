@@ -213,8 +213,8 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
 
         n_epoch += 1
         step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
-        if n_epoch >= 1:
-            learning_rate = 0.001
+        warm_up = [float(l) for l in args.config.get('train', 'lr_step_warmup').split(',')]
+        learning_rate = warm_up[n_epoch]
         for s in step_epochs:
             if n_epoch >= s:
                 learning_rate *= 0.9
