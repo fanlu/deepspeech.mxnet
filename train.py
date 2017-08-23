@@ -92,7 +92,9 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
 
     optimizer = args.config.get('optimizer', 'optimizer')
     learning_rate = args.config.getfloat('train', 'learning_rate')
+    learning_rate_start = args.config.getfloat('train', 'learning_rate_start')
     learning_rate_annealing = args.config.getfloat('train', 'learning_rate_annealing')
+    lr_factor = args.config.getfloat('train', 'lr_factor')
 
     mode = args.config.get('common', 'mode')
     num_epoch = args.config.getint('train', 'num_epoch')
@@ -170,6 +172,19 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
             break
         loss_metric.reset()
         log.info(host_name + '---------train---------')
+
+        step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
+        if n_epoch < step_epochs[0]:
+            learning_rate_cur = learning_rate_start + n_epoch * (learning_rate - learning_rate_start) / step_epochs[0]
+        else:
+            learning_rate_cur = learning_rate
+            for s in step_epochs:
+                if n_epoch >= s:
+                    learning_rate_cur *= lr_factor
+
+        lr_scheduler.learning_rate = learning_rate_cur
+        log.info("n_epoch %d's lr is %.7f" % (n_epoch, lr_scheduler.learning_rate))
+        summary_writer.add_scalar('lr', lr_scheduler.learning_rate, n_epoch)
         for nbatch, data_batch in enumerate(data_train):
             module.forward_backward(data_batch)
             module.update()
@@ -212,14 +227,5 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
             save_checkpoint(module, prefix=config_util.get_checkpoint_path(args), epoch=n_epoch, save_optimizer_states=save_optimizer_states)
 
         n_epoch += 1
-        step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
-        warm_up = [float(l) for l in args.config.get('train', 'lr_step_warmup').split(',')]
-        learning_rate = warm_up[n_epoch]
-        for s in step_epochs:
-            if n_epoch >= s:
-                learning_rate *= 0.9
-        lr_scheduler.learning_rate=learning_rate
-        summary_writer.add_scalar('lr', lr_scheduler.learning_rate, n_epoch)
-        log.info("n_epoch %d's lr is %.7f" % (n_epoch, lr_scheduler.learning_rate))
 
     log.info('FINISH')
