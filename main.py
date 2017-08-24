@@ -68,7 +68,7 @@ def load_labelutil(labelUtil, is_bi_graphemes, language="en", zh_type="zi"):
 
 
 
-def load_data(args):
+def load_data(args, kv=None):
     mode = args.config.get('common', 'mode')
     if mode not in ['train', 'predict', 'load']:
         raise Exception('mode must be the one of the followings - train,predict,load')
@@ -176,7 +176,9 @@ def load_data(args):
                                     language=language,
                                     zh_type=zh_type,
                                     buckets=buckets,
-                                    save_feature_as_csvfile=save_feature_as_csvfile)
+                                    save_feature_as_csvfile=save_feature_as_csvfile,
+                                    num_parts=kv.num_workers,
+                                    part_index=kv.rank)
     else:
         data_loaded = STTIter(partition="train",
                               count=datagen.count,
@@ -303,10 +305,14 @@ if __name__ == '__main__':
     # check the number of gpus is positive divisor of the batch size for data parallel
     if batch_size % num_gpu != 0:
         raise Exception('num_gpu should be positive divisor of batch_size')
+
+    kvstore_option = args.config.get('common', 'kvstore_option')
+    kv = mx.kv.create(kvstore_option)
+
     if mode == "train" or mode == "load":
-        data_train, data_val, args = load_data(args)
+        data_train, data_val, args = load_data(args, kv=kv)
     elif mode == "predict":
-        data_train, args = load_data(args)
+        data_train, args = load_data(args, kv=kv)
     is_batchnorm = args.config.getboolean('arch', 'is_batchnorm')
     is_bucketing = args.config.getboolean('arch', 'is_bucketing')
 
@@ -329,11 +335,11 @@ if __name__ == '__main__':
             label_names = [x[0] for x in data_train.provide_label]
             module = mx.mod.Module(model_loaded, context=contexts,
                                    data_names=data_names, label_names=label_names)
-        do_training(args=args, module=module, data_train=data_train, data_val=data_val)
+        do_training(args=args, module=module, data_train=data_train, data_val=data_val, kv=kv)
     # if mode is 'load', it loads model from the checkpoint and continues the training.
     elif mode == 'load':
         do_training(args=args, module=model_loaded, data_train=data_train, data_val=data_val,
-                    begin_epoch=model_num_epoch + 1)
+                    begin_epoch=model_num_epoch + 1, kv=kv)
     # if mode is 'predict', it predict label from the input by the input model
     elif mode == 'predict':
         # predict through data

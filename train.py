@@ -12,6 +12,7 @@ from stt_metric import STTMetric
 from tensorboard import SummaryWriter
 import socket
 import json
+import numpy as np
 #import stt_bucketing_module
 # from stt_bucketing_module import STTBucketingModule
 
@@ -70,7 +71,7 @@ def _get_lr_scheduler(args, kv):
     return (learning_rate, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
 
 
-def do_training(args, module, data_train, data_val, begin_epoch=0):
+def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
     from distutils.dir_util import mkpath
 
     host_name = socket.gethostname()
@@ -142,7 +143,6 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     if begin_epoch == 0 and mode == 'train':
         module.init_params(initializer=get_initializer(args))
 
-    kv = mx.kv.create(kvstore_option)
     lr_scheduler = SimpleLRScheduler(learning_rate=learning_rate)
     # lr, lr_scheduler = _get_lr_scheduler(args, kv)
 
@@ -179,7 +179,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         else:
             learning_rate_cur = learning_rate
             for s in step_epochs:
-                if n_epoch >= s:
+                if n_epoch > s:
                     learning_rate_cur *= lr_factor
 
         lr_scheduler.learning_rate = learning_rate_cur
@@ -212,7 +212,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         summary_writer.add_scalar('CER validation', val_cer, n_epoch)
         summary_writer.add_scalar('loss validation', val_ctc_loss, n_epoch)
         assert curr_acc is not None, 'cannot find Acc_exclude_padding in eval metric'
-
+        np.random.seed(n_epoch)
         data_train.reset()
         data_train.is_first_epoch = False
 
