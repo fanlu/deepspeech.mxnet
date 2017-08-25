@@ -178,7 +178,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
             learning_rate_cur = learning_rate_start + n_epoch * (learning_rate - learning_rate_start) / step_epochs[0]
         else:
             learning_rate_cur = learning_rate
-            for s in step_epochs:
+            for s in step_epochs[1:]:
                 if n_epoch > s:
                     learning_rate_cur *= lr_factor
 
