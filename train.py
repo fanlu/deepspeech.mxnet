@@ -182,7 +182,11 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
                 if n_epoch > s:
                     learning_rate_cur *= lr_factor
 
-        lr_scheduler.learning_rate = learning_rate_cur
+        if learning_rate_pre:
+            lr_scheduler.learning_rate = learning_rate_cur * learning_rate_cur / learning_rate_pre
+        else:
+            lr_scheduler.learning_rate = learning_rate_cur
+        learning_rate_pre = learning_rate_cur
         log.info("n_epoch %d's lr is %.7f" % (n_epoch, lr_scheduler.learning_rate))
         summary_writer.add_scalar('lr', lr_scheduler.learning_rate, n_epoch)
         for nbatch, data_batch in enumerate(data_train):
