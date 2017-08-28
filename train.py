@@ -165,7 +165,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
     #tensorboard setting
     tblog_dir = args.config.get('common', 'tensorboard_log_dir')
     summary_writer = SummaryWriter(tblog_dir)
-
+    learning_rate_pre = 0
     while True:
 
         if n_epoch >= num_epoch:
