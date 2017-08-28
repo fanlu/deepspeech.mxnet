@@ -209,7 +209,10 @@ def load_data(args, kv=None):
                                               language=language,
                                               zh_type=zh_type,
                                               buckets=buckets,
-                                              save_feature_as_csvfile=save_feature_as_csvfile)
+                                              save_feature_as_csvfile=save_feature_as_csvfile,
+                                              num_parts=kv.num_workers,
+                                              part_index=kv.rank
+                                              )
         else:
             validation_loaded = STTIter(partition="validation",
                                         count=datagen.val_count,
