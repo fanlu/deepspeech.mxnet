@@ -174,15 +174,23 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         log.info(host_name + '---------train---------')
 
         step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
+        # warm up to step_epochs[0] if step_epochs[0] > 0
         if n_epoch < step_epochs[0]:
             learning_rate_cur = learning_rate_start + n_epoch * (learning_rate - learning_rate_start) / step_epochs[0]
         else:
-            learning_rate_cur = learning_rate
-            for s in step_epochs[1:]:
-                if n_epoch > s:
-                    learning_rate_cur *= lr_factor
+            # scaling lr every epoch
+            if len(step_epochs) == 1:
+                learning_rate_cur = learning_rate
+                for s in range(n_epoch):
+                    learning_rate_cur /= learning_rate_annealing
+            # scaling lr by step_epochs[1:]
+            else:
+                learning_rate_cur = learning_rate
+                for s in step_epochs[1:]:
+                    if n_epoch > s:
+                        learning_rate_cur *= lr_factor
 
-        if learning_rate_pre:
+        if learning_rate_pre and args.config.getboolean('train', 'momentum_correction'):
             lr_scheduler.learning_rate = learning_rate_cur * learning_rate_cur / learning_rate_pre
         else:
             lr_scheduler.learning_rate = learning_rate_cur
