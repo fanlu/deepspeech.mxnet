@@ -5,9 +5,11 @@ import os.path
 import numpy as np
 import soundfile
 from numpy.lib.stride_tricks import as_strided
-
+import random
 
 logger = logging.getLogger(__name__)
+
+noise_work, sr2 = soundfile.read('resources/noise_work.wav', dtype='float32')
 
 
 def calc_feat_dim(window, max_freq):
@@ -107,6 +109,9 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
     if (os.path.isfile(csvfilename) is False) or overwrite: 
         with soundfile.SoundFile(filename) as sound_file:
             audio = sound_file.read(dtype='float32')
+            if random.random() < 0.4:
+                start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
+                audio = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
             sample_rate = sound_file.samplerate
             if audio.ndim >= 2:
                 audio = np.mean(audio, 1)

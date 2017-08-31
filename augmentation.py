@@ -168,10 +168,23 @@ if __name__ == "__main__":
   for w in wavs[100:105]:
     path, name = w.rsplit('/', 1)
     outputfile = path + '/' + name.split('.')[0] + "-" + str(1) + "-" + 'work.wav'
-    aug(w, '/Users/lonica/Downloads/noise_work.wav', outputfile, 3, 1)
+    # aug(w, '/Users/lonica/Downloads/noise_work.wav', outputfile, 3, 1)
 
-    # with soundfile.SoundFile(w) as sound_file:
-    #   audio = sound_file.read(dtype='float32')
+    audio, sr1 = sf.read(w, dtype='float32')
+    noise_work, sr2 = sf.read('/Users/lonica/Downloads/noise_work.wav', dtype='float32')
+
+    # audio, sr1 = librosa.load(w)
+    # noise_work, sr2 = librosa.load('/Users/lonica/Downloads/noise_work.wav')
+
+    start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
+    result_a = audio + 2 * noise_work[start: audio.shape[0] + start]
+
+    # librosa.output.write_wav(outputfile, result_a, sr1)
+    #
+    sf.write(outputfile, result_a, sr1)
+
+
+
     #
     # _, wav_file = wav.read(w)
     # w_f = np.array(wav_file).astype(np.float32)

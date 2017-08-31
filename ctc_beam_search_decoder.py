@@ -101,7 +101,7 @@ def ctc_beam_search_decoder(probs_seq,
             probs_b_prev[l] + probs_nb_prev[l])
         else:
           last_char = l[-1]
-          new_char = vocabulary[c + 1]
+          new_char = vocabulary[c]
           l_plus = l + new_char
           if not l_plus in prefix_set_next:
             probs_b_cur[l_plus], probs_nb_cur[l_plus] = 0.0, 0.0
