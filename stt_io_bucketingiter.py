@@ -33,7 +33,9 @@ class BucketSTTIter(mx.io.DataIter):
                  save_feature_as_csvfile=False,
                  num_parts=1,
                  part_index=0,
-                 n_epochs=0
+                 n_epochs=0,
+                 add_noise=False,
+                 noise_percent=0.4
                  ):
         super(BucketSTTIter, self).__init__()
 
@@ -54,6 +56,8 @@ class BucketSTTIter(mx.io.DataIter):
         self.num_parts = num_parts
         self.part_index = part_index
         self.n_epochs = n_epochs
+        self.add_noise = add_noise
+        self.noise_percent = noise_percent
         # self.partition = datagen.partition
         if partition == 'train':
             durations = datagen.train_durations
@@ -158,14 +162,18 @@ class BucketSTTIter(mx.io.DataIter):
                                                       seq_length=self.buckets[i],
                                                       save_feature_as_csvfile=self.save_feature_as_csvfile,
                                                       language=self.language,
-                                                      zh_type=self.zh_type)
+                                                      zh_type=self.zh_type,
+                                                      add_noise=self.add_noise,
+                                                      noise_percent=self.noise_percent)
         else:
             data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=False,
                                                       is_bi_graphemes=self.is_bi_graphemes,
                                                       seq_length=self.buckets[i],
                                                       save_feature_as_csvfile=self.save_feature_as_csvfile,
                                                       language=self.language,
-                                                      zh_type=self.zh_type)
+                                                      zh_type=self.zh_type,
+                                                      add_noise=self.add_noise,
+                                                      noise_percent=self.noise_percent)
 
         data_all = [mx.nd.array(data_set['x'])] + self.init_state_arrays
         label_all = [mx.nd.array(data_set['y'])]

@@ -79,6 +79,10 @@ def load_data(args, kv=None):
     whcs.height = args.config.getint('data', 'height')
     whcs.channel = args.config.getint('data', 'channel')
     whcs.stride = args.config.getint('data', 'stride')
+
+    add_noise = args.config.getboolean('data', 'add_noise')
+    noise_percent = args.config.getboolean('data', 'noise_percent')
+
     save_dir = 'checkpoints'
     model_name = args.config.get('common', 'prefix')
     is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
@@ -178,7 +182,9 @@ def load_data(args, kv=None):
                                     buckets=buckets,
                                     save_feature_as_csvfile=save_feature_as_csvfile,
                                     num_parts=kv.num_workers,
-                                    part_index=kv.rank)
+                                    part_index=kv.rank,
+                                    add_noise=add_noise,
+                                    noise_percent=noise_percent)
     else:
         data_loaded = STTIter(partition="train",
                               count=datagen.count,
