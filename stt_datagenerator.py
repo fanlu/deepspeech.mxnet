@@ -55,7 +55,7 @@ class DataGenerator(object):
         self.feats_mean = feats_mean
         self.feats_std = feats_std
 
-    def featurize(self, audio_clip, overwrite=False, save_feature_as_csvfile=False, add_noise=False, noise_percent=0.4):
+    def featurize(self, audio_clip, overwrite=False, save_feature_as_csvfile=False, noise_percent=0.4):
         """ For a given audio clip, calculate the log of its Fourier Transform
         Params:
             audio_clip(str): Path to the audio clip
@@ -63,7 +63,7 @@ class DataGenerator(object):
         return spectrogram_from_file(
             audio_clip, step=self.step, window=self.window,
             max_freq=self.max_freq, overwrite=overwrite,
-            save_feature_as_csvfile=save_feature_as_csvfile, add_noise=add_noise, noise_percent=noise_percent)
+            save_feature_as_csvfile=save_feature_as_csvfile, noise_percent=noise_percent)
 
     def load_metadata_from_desc_file(self, desc_file, partition='train',
                                      max_duration=16.0, ):
@@ -163,7 +163,7 @@ class DataGenerator(object):
 
     def prepare_minibatch(self, audio_paths, texts, overwrite=False,
                           is_bi_graphemes=False, seq_length=-1, save_feature_as_csvfile=False, language="en",
-                          zh_type="zi", add_noise=False, noise_percent=0.4):
+                          zh_type="zi", noise_percent=0.4):
         """ Featurize a minibatch of audio, zero pad them and return a dictionary
         Params:
             audio_paths (list(str)): List of paths to audio files
@@ -177,7 +177,7 @@ class DataGenerator(object):
         # Calculate the features for each audio clip, as the log of the
         # Fourier Transform of the audio
         features = [
-            self.featurize(a, overwrite=overwrite, save_feature_as_csvfile=save_feature_as_csvfile, add_noise=add_noise,
+            self.featurize(a, overwrite=overwrite, save_feature_as_csvfile=save_feature_as_csvfile,
                            noise_percent=noise_percent) for a in
             audio_paths]
         input_lengths = [f.shape[0] for f in features]
