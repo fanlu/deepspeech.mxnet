@@ -119,7 +119,7 @@ def load_data(args, kv=None):
             if overwrite_meta_files:
                 log.info("Generate mean and std from samples")
                 normalize_target_k = args.config.getint('train', 'normalize_target_k')
-                datagen.sample_normalize(normalize_target_k, True)
+                datagen.sample_normalize(normalize_target_k, True, noise_percent)
             else:
                 log.info("Read mean and std from meta files")
                 datagen.get_meta_from_file(

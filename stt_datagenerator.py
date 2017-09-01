@@ -231,7 +231,7 @@ class DataGenerator(object):
         return self.iterate(self.val_audio_paths, self.val_texts,
                             minibatch_size)
 
-    def preprocess_sample_normalize(self, threadIndex, audio_paths, overwrite, return_dict):
+    def preprocess_sample_normalize(self, threadIndex, audio_paths, overwrite, noise_percent, return_dict):
         if len(audio_paths) > 0:
             audio_clip = audio_paths[0]
             feat = self.featurize(audio_clip=audio_clip, overwrite=overwrite)
@@ -240,7 +240,7 @@ class DataGenerator(object):
             dim = feat.shape[1]
             if len(audio_paths) > 1:
                 for audio_path in audio_paths[1:]:
-                    next_feat = self.featurize(audio_clip=audio_path, overwrite=overwrite)
+                    next_feat = self.featurize(audio_clip=audio_path, overwrite=overwrite, noise_percent=noise_percent)
                     next_feat_squared = np.square(next_feat)
                     feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, dim)
                     feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
@@ -250,7 +250,7 @@ class DataGenerator(object):
                     count += float(next_feat.shape[0])
             return_dict[threadIndex] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
 
-    def sample_normalize(self, k_samples=1000, overwrite=False):
+    def sample_normalize(self, k_samples=1000, overwrite=False, noise_percent=0.4):
         """ Estimate the mean and std of the features from the training set
         Params:
             k_samples (int): Use this number of samples for estimation
@@ -271,7 +271,7 @@ class DataGenerator(object):
         jobs = []
         for threadIndex in range(cpu_count()):
             proc = Process(target=self.preprocess_sample_normalize,
-                           args=(threadIndex, audio_paths, overwrite, return_dict))
+                           args=(threadIndex, audio_paths, overwrite, noise_percent, return_dict))
             jobs.append(proc)
             proc.start()
         for proc in jobs:
