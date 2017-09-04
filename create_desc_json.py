@@ -84,7 +84,7 @@ def ai_2_phone():
 
 def ai_thchs30_2_word():
   ori_wavs = glob.glob("/export/fanlu/thchs30/data_thchs30/data/*.wav")
-  out_file = open("resources/thchs30_data_noise.json", 'w')
+  out_file = open("resources/thchs30_data.json", 'w')
   for w in ori_wavs:
     path, name = w.rsplit("/",1)
     rs = open(w + ".trn").readlines()[0].strip()
@@ -94,14 +94,29 @@ def ai_thchs30_2_word():
     audio.close()
     line = "{\"key\":\"" + w + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
     out_file.write(line + "\n")
-    for w2 in glob.glob(path.replace("data","data_aug")+"/" + name.split(".")[0] + "*.wav"):
-      audio = wave.open(w2)
-      duration = float(audio.getnframes()) / audio.getframerate()
-      audio.close()
-      line = "{\"key\":\"" + w2 + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
-      out_file.write(line + "\n")
+    #for w2 in glob.glob(path.replace("data","data_aug")+"/" + name.split(".")[0] + "*.wav"):
+    #  audio = wave.open(w2)
+    #  duration = float(audio.getnframes()) / audio.getframerate()
+    #  audio.close()
+    #  line = "{\"key\":\"" + w2 + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+    #  out_file.write(line + "\n")
     #print(ps)
   out_file.close()
+
+def search_2_word():
+  tran = open("/export/aiplatform/search/transcript").readlines()
+  out_file = open('resources/search.json', 'w')
+  for t in tran:
+    path, d, txt = t.split(" ", 2)
+    ps = generate_zi_label(txt.strip())
+    audio_path = "/export/aiplatform/search/" + "wav/" + path
+    audio = wave.open(audio_path)
+    duration = float(audio.getnframes()) / audio.getframerate()
+    audio.close()
+    line = "{\"key\":\"" + audio_path + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+    out_file.write(line + "\n")
+  out_file.close()
+    
 
 def ai_2_word():
   lines = open(_data_path + "data_aishell/transcript/aishell_transcript_v0.8.txt").readlines()
@@ -330,12 +345,15 @@ if __name__ == '__main__':
   # # aishell(args.data_directory, args.output_file)
   #
   # aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
-  split_file_2_multi("resources/aishell_train.json", 3)
+  #split_file_2_multi("resources/aishell_train.json", 3)
   #read_lexicon()
   #print(len(word_2_lexicon))
   #ai_2_word()
+  
   #ai_thchs30_2_word()
   
+  search_2_word()
+
   #py_2_phone()
   #zi_2_phone()
   # word_2_pinyin('resources/aishell_validation.json')
