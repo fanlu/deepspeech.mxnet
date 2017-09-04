@@ -215,7 +215,8 @@ def load_data(args, kv=None):
                                               buckets=buckets,
                                               save_feature_as_csvfile=save_feature_as_csvfile,
                                               num_parts=kv.num_workers,
-                                              part_index=kv.rank
+                                              part_index=kv.rank,
+                                              noise_percent=0
                                               )
         else:
             validation_loaded = STTIter(partition="validation",
