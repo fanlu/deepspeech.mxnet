@@ -128,6 +128,10 @@ class DataGenerator(object):
     def normalize(self, feature, eps=1e-14):
         return (feature - self.feats_mean) / (self.feats_std + eps)
 
+    def normalize_self(self, feature, eps=1e-14):
+        return (feature - np.mean(feature, axis=1)[:, np.newaxis]) / (np.sqrt(
+            np.sum(np.square(feature), axis=1)) + eps)[:, np.newaxis]
+
     def get_max_label_length(self, partition, is_bi_graphemes=False, language="zh", zh_type="zi"):
         if partition == 'train':
             texts = self.train_texts + self.val_texts
