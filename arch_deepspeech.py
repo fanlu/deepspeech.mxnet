@@ -81,6 +81,9 @@ def arch(args, seq_len=None):
 
             rnn_type = args.config.get("arch", "rnn_type")
             num_rnn_layer = args.config.getint("arch", "num_rnn_layer")
+
+            num_hidden_proj = args.config.getint("arch", "num_hidden_proj")
+
             num_hidden_rnn_list = json.loads(args.config.get("arch", "num_hidden_rnn_list"))
 
             is_batchnorm = args.config.getboolean("arch", "is_batchnorm")
@@ -133,6 +136,7 @@ def arch(args, seq_len=None):
                                      num_hidden_lstm_list=num_hidden_rnn_list,
                                      num_lstm_layer=num_rnn_layer,
                                      dropout=0.,
+                                     num_hidden_proj=num_hidden_proj,
                                      is_batchnorm=is_batchnorm,
                                      is_bucketing=is_bucketing)
             elif rnn_type == "gru":
