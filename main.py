@@ -375,7 +375,7 @@ if __name__ == '__main__':
             model_loaded.bind(for_training=False, data_shapes=data_train.provide_data,
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
-        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu)
+        eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu)
         if is_batchnorm:
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
