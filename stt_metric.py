@@ -123,20 +123,20 @@ class EvalSTTMetric(STTMetric):
       import time
       # import kenlm
       # model = kenlm.Model('/Users/lonica/Downloads/sougou_2.binary')
-      st = time.time()
-      beam_result = ctc_beam_search_decoder(
-        probs_seq=probs,
-        beam_size=3,
-        vocabulary=labelUtil.byIndex,
-        blank_id=0,
-        cutoff_prob=0.9,
-        # ext_scoring_func=model.score
-      )
-      st1 = time.time() - st
-      res_str = beam_result[0][1]
-      print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
+      #st = time.time()
+      #beam_result = ctc_beam_search_decoder(
+      #  probs_seq=probs,
+      #  beam_size=3,
+      #  vocabulary=labelUtil.byIndex,
+      #  blank_id=0,
+      #  cutoff_prob=0.9,
+      #  # ext_scoring_func=model.score
+      #)
+      #st1 = time.time() - st
+      #res_str = beam_result[0][1]
+      #print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
       res_str1 = labelUtil.convert_num_to_word(p)
-      # print("%s" % res_str1)
+      print("%s" % res_str1)
 
       # max_time_steps = int(seq_length)
       # input_log_prob_matrix_0 = np.log(probs)  # + 2.0
@@ -162,7 +162,7 @@ class EvalSTTMetric(STTMetric):
       #   tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
       #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
       self.total_ctc_loss += self.batch_loss
-      self.placeholder = res_str
+      self.placeholder = res_str1
 
 
 def pred_best(p):
