@@ -386,6 +386,9 @@ if __name__ == '__main__':
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
+        val_cer, val_n_label, val_l_dist, val_ctc_loss = eval_metric.get_name_value()
+        log.info("val cer=%f (%d / %d), ctc_loss=%f", val_cer, int(val_n_label - val_l_dist),
+                 val_n_label, val_ctc_loss)
     else:
         raise Exception(
             'Define mode in the cfg file first. ' +
