@@ -249,12 +249,12 @@ def bi_lstm_unroll(net, num_lstm_layer, seq_len, num_hidden_lstm_list, dropout=0
         hidden_all = []
         for i in range(seq_len):
             hidden_all.append(mx.sym.Concat(*[net_forward[i], net_backward[i]], dim=1))
-        hidden_final = []
-        for h in hidden_all:
-            if num_hidden_proj > 0:
-                hidden_final.append(mx.sym.Reshape(h, target_shape=(0, num_hidden_proj)))
-            else:
-                hidden_final.append(mx.sym.Reshape(h, target_shape=(0, num_hidden_lstm_list[-1])))
+        # hidden_final = []
+        # for h in hidden_all:
+        #     if num_hidden_proj > 0:
+        #         hidden_final.append(mx.sym.Reshape(h, target_shape=(0, num_hidden_proj)))
+        #     else:
+        #         hidden_final.append(mx.sym.Reshape(h, target_shape=(0, num_hidden_lstm_list[-1])))
         net = hidden_all
     return net
 

@@ -25,7 +25,7 @@ def prepare_data(args):
     rnn_type = args.config.get("arch", "rnn_type")
     num_rnn_layer = args.config.getint("arch", "num_rnn_layer")
     num_hidden_rnn_list = json.loads(args.config.get("arch", "num_hidden_rnn_list"))
-
+    num_hidden_proj = args.config.getint("arch", "num_hidden_proj")
     batch_size = args.config.getint("common", "batch_size")
 
     if rnn_type == 'lstm':
@@ -39,10 +39,16 @@ def prepare_data(args):
         backward_init_c = [('backward_l%d_init_c' % l, (batch_size, num_hidden_rnn_list[l]))
                            for l in range(num_rnn_layer)]
         init_c = forward_init_c + backward_init_c
-        forward_init_h = [('forward_l%d_init_h' % l, (batch_size, num_hidden_rnn_list[l]))
-                          for l in range(num_rnn_layer)]
-        backward_init_h = [('backward_l%d_init_h' % l, (batch_size, num_hidden_rnn_list[l]))
-                           for l in range(num_rnn_layer)]
+        if num_hidden_proj > 0:
+            forward_init_h = [('forward_l%d_init_h' % l, (batch_size, num_hidden_proj))
+                              for l in range(num_rnn_layer)]
+            backward_init_h = [('backward_l%d_init_h' % l, (batch_size, num_hidden_proj))
+                               for l in range(num_rnn_layer)]
+        else:
+            forward_init_h = [('forward_l%d_init_h' % l, (batch_size, num_hidden_rnn_list[l]))
+                              for l in range(num_rnn_layer)]
+            backward_init_h = [('backward_l%d_init_h' % l, (batch_size, num_hidden_rnn_list[l]))
+                               for l in range(num_rnn_layer)]
         init_h = forward_init_h + backward_init_h
     elif rnn_type == 'gru':
         init_h = [('l%d_init_h' % l, (batch_size, num_hidden_rnn_list[l]))
