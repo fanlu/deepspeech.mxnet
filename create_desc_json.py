@@ -384,35 +384,39 @@ def xiaoshuo_2_word():
     d = set()
     for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
         d.add(line.rsplit(",", 1)[0])
-    special_2_normal = {'\xe3\x80\x80': "", '\xef\xb9\x92': "", '\xe3\x80\x8d': "", '\xe3\x80\x8c': "", '\xee\x80\x84': "", "'": "", '\xc2\xa0': "", '\xe3\x80\x8e': "",
-			"\"": "", '\xef\xbb\xbf': "", ",": "", "。": "","，": "", '\xe3\x80\x8f': "", '\xe2\x80\x95': '', '\xee\x97\xa5': '', '\xef\xbf\xbd': '','\xef\xbc\x8e': '', 
-			'|': '', '\xe2\x94\x80': '', "s\xc3\xa8": "色","r\xc3\xac":"日",'r\xc7\x94': "乳",'\xe5\xa6\xb3': "你",
-			'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春", 'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
-			'\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴', '\xe9\xa8\xb7': '骚'
-			}
+    special_2_normal = {'\xe3\x80\x80': "", '\xef\xb9\x92': "", '\xe3\x80\x8d': "", '\xe3\x80\x8c': "",
+                        '\xee\x80\x84': "", "'": "", '\xc2\xa0': "", '\xe3\x80\x8e': "",
+                        "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", '\xe3\x80\x8f': "", '\xe2\x80\x95': '',
+                        '\xee\x97\xa5': '', '\xef\xbf\xbd': '', '\xef\xbc\x8e': '',
+                        '|': '', '\xe2\x94\x80': '', "s\xc3\xa8": "色", "r\xc3\xac": "日", 'r\xc7\x94': "乳",
+                        '\xe5\xa6\xb3': "你", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春",
+                        'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
+                        '\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴',
+                        '\xe9\xa8\xb7': '骚'
+                        }
     DIR = "/export/aiplatform/data_xiaoshuo/wav/"
     out_file = open(DIR + 'resulttxt.json', 'w')
     for i in glob.glob(DIR + "resulttxt/*/*.wav"):
         txt = "".join([line.strip() for line in open(i[:-3] + "txt").readlines()])
         txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
         for k, v in special_2_normal.items():
-	    txt = txt.replace(k, v)
+            txt = txt.replace(k, v)
         ps = generate_zi_label(txt)
         if len(ps) == 0:
             continue
         flag = False
         for p in ps:
             if not p in d:
-		print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
-		flag = True
+                print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
+                flag = True
                 break
-	if flag:
-	    continue
+        if flag:
+            continue
         audio = wave.open(i)
         duration = float(audio.getnframes()) / audio.getframerate()
         audio.close()
-	if duration > 16:
-	    continue
+        if duration > 16:
+            continue
         line = "{\"key\":\"" + i + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
         out_file.write(line + "\n")
     out_file.close()
