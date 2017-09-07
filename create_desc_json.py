@@ -369,9 +369,10 @@ def client_2_word():
 
 def xiaoshuo_2_word():
   DIR = "/export/aiplatform/data_xiaoshuo/wav/"
-  out_file = open('/export/aiplatform/data_xiaoshuo/wav/result010.json', 'w')
-  for i in glob.glob(DIR + "result010/*/*.wav"):
-    txt = open(i.replace("wav", "txt"))
+  out_file = open('/export/aiplatform/data_xiaoshuo/wav/result10_p.json', 'w')
+  for i in glob.glob("/export/aiplatform/data_xiaoshuo/wav/result10/黑白配/05_74.wav"): #DIR + "result15/*/*.wav"):
+    print(i)
+    txt = "".join(open(i[:-3] + "txt").readlines())
     ps = generate_zi_label(txt.replace(",", "").replace("。", "").replace("，", "").strip())
     audio = wave.open(i)
     duration = float(audio.getnframes()) / audio.getframerate()
