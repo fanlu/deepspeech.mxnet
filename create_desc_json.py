@@ -1,3 +1,4 @@
+# encoding=utf-8
 """
 Use this script to create JSON-Line description files that can be used to
 train deep-speech models through this library.
@@ -26,7 +27,6 @@ _data_path = "/Users/lonica/Downloads/"
 # _data_path = "/export/fanlu/aishell/"
 
 word_2_lexicon = defaultdict(list)
-thu1 = thulac.thulac(seg_only=True)
 
 def read_lexicon():
   lines = open(_data_path + "resource_aishell/lexicon.txt").readlines()
@@ -335,6 +335,38 @@ def split_file_2_multi(input, num):
     with open('%s/%s_%d.json' % (path, name_pre, (i % num)), 'a+') as tmp:
       tmp.write(line)
 
+def client_2_word():
+  DIR = "/export/aiplatform/client_files/"
+  
+  def compare(x, y):
+      stat_x = os.stat(DIR + "/" + x)
+      stat_y = os.stat(DIR + "/" + y)
+      if stat_x.st_ctime < stat_y.st_ctime:
+          return -1
+      elif stat_x.st_ctime > stat_y.st_ctime:
+          return 1
+      else:
+          return 0
+  
+  #iterms = os.listdir(DIR)
+  
+  #iterms.sort(compare)
+  
+  #for iterm in iterms:
+  #    print(iterm)
+  wavs = open(DIR+'wav.txt').readlines()
+  labels = open(DIR + 'label.txt').readlines()
+  out_file = open('resources/client.json', 'w')
+  for i, (path, txt) in enumerate(zip(wavs, labels)):
+    ps = generate_zi_label(txt.replace(",","").replace("。","").replace("，","").strip())
+    audio_path = DIR + path.strip()
+    audio = wave.open(audio_path)
+    duration = float(audio.getnframes()) / audio.getframerate()
+    audio.close()
+    line = "{\"key\":\"" + audio_path + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+    out_file.write(line + "\n")
+  out_file.close()
+
 if __name__ == '__main__':
   # parser = argparse.ArgumentParser()
   # parser.add_argument('data_directory', type=str,
@@ -352,7 +384,9 @@ if __name__ == '__main__':
   
   #ai_thchs30_2_word()
   
-  search_2_word()
+  #search_2_word()
+
+  client_2_word()
 
   #py_2_phone()
   #zi_2_phone()
