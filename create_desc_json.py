@@ -392,7 +392,7 @@ def xiaoshuo_2_word():
                         '\xe5\xa6\xb3': "你", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春",
                         'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
                         '\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴',
-                        '\xe9\xa8\xb7': '骚'
+                        '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "",
                         }
     DIR = "/export/aiplatform/data_xiaoshuo/wav/"
     out_file = open(DIR + 'resulttxt.json', 'w')
