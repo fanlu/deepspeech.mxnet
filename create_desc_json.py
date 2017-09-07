@@ -367,6 +367,19 @@ def client_2_word():
     out_file.write(line + "\n")
   out_file.close()
 
+def xiaoshuo_2_word():
+  DIR = "/export/aiplatform/data_xiaoshuo/wav/"
+  out_file = open('/export/aiplatform/data_xiaoshuo/wav/result010.json', 'w')
+  for i in glob.glob(DIR + "result010/*/*.wav"):
+    txt = open(i.replace("wav", "txt"))
+    ps = generate_zi_label(txt.replace(",", "").replace("。", "").replace("，", "").strip())
+    audio = wave.open(i)
+    duration = float(audio.getnframes()) / audio.getframerate()
+    audio.close()
+    line = "{\"key\":\"" + i + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+    out_file.write(line + "\n")
+  out_file.close()
+
 if __name__ == '__main__':
   # parser = argparse.ArgumentParser()
   # parser.add_argument('data_directory', type=str,
@@ -386,7 +399,9 @@ if __name__ == '__main__':
   
   #search_2_word()
 
-  client_2_word()
+  #client_2_word()
+
+  xiaoshuo_2_word()
 
   #py_2_phone()
   #zi_2_phone()
