@@ -133,6 +133,13 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
                    label_shapes=data_train.provide_label,
                    for_training=True)
         _, arg_params, aux_params = mx.model.load_checkpoint(model_path, model_num_epoch)
+
+        # arg_params2 = {}
+        # for item in arg_params.keys():
+        #     if not item.startswith("forward") and not item.startswith("backward") and not item.startswith("rear"):
+        #         arg_params2[item] = arg_params[item]
+        # model.set_params(arg_params2, aux_params, allow_missing=True, allow_extra=True)
+
         model.set_params(arg_params, aux_params)
         module = model
     else:

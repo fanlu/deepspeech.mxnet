@@ -198,7 +198,7 @@ class DataGenerator(object):
         for i in range(mb_size):
             feat = features[i]
             feat = self.normalize(feat)  # Center using means and std
-            x[i, :feat.shape[0], :] = feat
+            x[i, :feat.shape[0], :] = feat  # padding with 0 padding with noise？
             if language == "en" and is_bi_graphemes:
                 label = generate_bi_graphemes_label(texts[i])
                 label = labelUtil.convert_bi_graphemes_to_num(label)
@@ -295,8 +295,17 @@ class DataGenerator(object):
 
 
 if __name__ == "__main__":
-    datagen = DataGenerator("test", "test1")
-    datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
+    log = LogUtil().getlogger()
+    with open("/Users/lonica/Downloads/resulttxt_1.json", 'rt', encoding='UTF-8') as json_line_file:
+        for line_num, json_line in enumerate(json_line_file):
+            try:
+                spec = json.loads(json_line)
+            except Exception as e:
+                print(json_line)
+                log.warn('Error reading line #{}: {}'.format(line_num, json_line))
+                log.warn(str(e))
+    # datagen = DataGenerator("test", "test1")
+    # datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/103-1240-0000.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/5390-30102-0021.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/S0150/S0150_mic/BAC009S0150W0498.wav", overwrite=True, save_feature_as_csvfile=True)
