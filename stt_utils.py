@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 import os
 import os.path
@@ -106,7 +107,11 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
         eps (float): Small value to ensure numerical stability (for ln(x))
     """
 
-    csvfilename = filename.replace(".wav", ".csv")
+    filename = filename.encode("utf-8")
+    csvfilename = filename[:-3] + "csv"
+    #print(1)
+    #print(csvfilename)
+    #print(2)
     if (os.path.isfile(csvfilename) is False) or overwrite:
         with soundfile.SoundFile(filename) as sound_file:
             audio = sound_file.read(dtype='float32')
