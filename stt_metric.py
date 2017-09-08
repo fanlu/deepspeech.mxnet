@@ -62,7 +62,7 @@ class STTMetric(mx.metric.EvalMetric):
         self.total_n_label += len(l)
         self.total_l_dist += l_distance
         this_cer = float(l_distance) / float(len(l))
-        if self.is_logging:
+        if self.is_logging and this_cer > 0.4:
           log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
           log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
             host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
