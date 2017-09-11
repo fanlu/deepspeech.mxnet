@@ -135,7 +135,7 @@ class EvalSTTMetric(STTMetric):
                 ext_scoring_func=self.model.score
             )
             st1 = time.time() - st
-            for index in range(beam_size):
+            for index in range(len(beam_result)):
                 res_str += beam_result[index][1] + "\n"
             print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
 
