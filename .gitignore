@@ -4,6 +4,7 @@
 *log
 checkpoints/*
 *.wav
+*.amr
 *.speex
 *.swp
 resources/**/*

@@ -347,7 +347,7 @@ def split_file_2_multi(input, num):
 
 
 def client_2_word():
-    DIR = "/export/aiplatform/client_files/"
+    DIR = "/export/aiplatform/client_files4/"
 
     def compare(x, y):
         stat_x = os.stat(DIR + "/" + x)
@@ -367,7 +367,7 @@ def client_2_word():
     #    print(iterm)
     wavs = open(DIR + 'wav.txt').readlines()
     labels = open(DIR + 'label.txt').readlines()
-    out_file = open('resources/client.json', 'w')
+    out_file = open(DIR + 'client4.json', 'w')
     for i, (path, txt) in enumerate(zip(wavs, labels)):
         ps = generate_zi_label(txt.replace(",", "").replace("。", "").replace("，", "").strip())
         audio_path = DIR + path.strip()
@@ -386,17 +386,19 @@ def xiaoshuo_2_word():
         d.add(line.rsplit(",", 1)[0])
     special_2_normal = {'\xe3\x80\x80': "", '\xef\xb9\x92': "", '\xe3\x80\x8d': "", '\xe3\x80\x8c': "",
                         '\xee\x80\x84': "", "'": "", '\xc2\xa0': "", '\xe3\x80\x8e': "",
-                        "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", '\xe3\x80\x8f': "", '\xe2\x80\x95': '',
+                        "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", "\\": "", ")": "", '\xe3\x80\x8f': "", '\xe2\x80\x95': '',
                         '\xee\x97\xa5': '', '\xef\xbf\xbd': '', '\xef\xbc\x8e': '',
                         '|': '', '\xe2\x94\x80': '', "s\xc3\xa8": "色", "r\xc3\xac": "日", 'r\xc7\x94': "乳",
                         '\xe5\xa6\xb3': "你", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春",
                         'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
                         '\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴',
-                        '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "",
+                        '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "", '\xe5\xa9\xac': '淫', '\xe4\xbe\x86': '来',
+			'\xe6\xb2\x92': '没', '\xe2\x80\xa2': "", '\xe2\x95\x94': "", '\xe2\x95\x95': "", '\xe2\x95\xa0': "",
+			'\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出', '\xe2\x95\x97': '',
                         }
-    DIR = "/export/aiplatform/data_xiaoshuo/wav/"
-    out_file = open(DIR + 'resulttxt.json', 'w')
-    for i in glob.glob(DIR + "resulttxt/*/*.wav"):
+    DIR = "/export/aiplatform/"
+    out_file = open(DIR + 'resulttxtnew25.json', 'w')
+    for i in glob.glob(DIR + "resulttxtnew25/*/*.wav"):
         txt = "".join([line.strip() for line in open(i[:-3] + "txt").readlines()])
         txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
         for k, v in special_2_normal.items():
@@ -441,9 +443,9 @@ if __name__ == '__main__':
 
     # search_2_word()
 
-    # client_2_word()
+    client_2_word()
 
-    xiaoshuo_2_word()
+    #xiaoshuo_2_word()
 
     # py_2_phone()
     # zi_2_phone()
