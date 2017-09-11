@@ -151,7 +151,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                      })
         filename = form['file'].filename
         print("filename is: " + str(filename))
-
+        output_file_pre = "/export/aiplatform/fanlu/yuyin_test/"
         if filename.endswith(".speex"):
             part1, part2 = filename.split(".")
             data = form['file'].file.read()
@@ -164,19 +164,16 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif filename.endswith(".amr"):
             part1, part2 = filename.split(".")
             data = form['file'].file.read()
-            open("./" + filename, "wb").write(data)
-            command = "ffmpeg -y -i " + part1 + ".amr -acodec pcm_s16le -ar 16000 -ac 1 -b 256 " + part1 + ".wav"
+            output_file_pre = output_file_pre + filename
+            open(output_file_pre, "wb").write(data)
+            command = "ffmpeg -y -i " + output_file_pre + part1 + ".amr -acodec pcm_s16le -ar 16000 -ac 1 -b 256 " + output_file_pre + part1 + ".wav"
             os.system(command)
-            command = "rm ./lolol.wav"
-            os.system(command)
-            command = "cp -f ./" + part1 + ".wav" + " ./lolol.wav"
-            os.system(command)
-            
+
         elif filename.endswith(".wav"):
             data = form['file'].file.read()
             open("./lolol.wav", "wb").write(data)
 
-        create_desc_json.ai_2_word_single("lolol.wav")
+        create_desc_json.ai_2_word_single(output_file_pre)
         trans_res = otherNet.getTrans("resources/d.json")
         content = bytes(trans_res.encode("utf-8"))
         self.send_response(200)

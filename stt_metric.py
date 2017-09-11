@@ -116,7 +116,7 @@ class EvalSTTMetric(STTMetric):
       p = []
       probs = []
       for k in range(int(seq_length)):
-        p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]) + 1)
+        p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
         probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
       p = pred_best(p)
       # print(probs)
