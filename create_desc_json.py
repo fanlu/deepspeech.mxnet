@@ -397,8 +397,8 @@ def xiaoshuo_2_word():
 			'\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出', '\xe2\x95\x97': '',
                         }
     DIR = "/export/aiplatform/"
-    out_file = open(DIR + 'resulttxtnew25.json', 'w')
-    for i in glob.glob(DIR + "resulttxtnew25/*/*.wav"):
+    out_file = open(DIR + 'resulttxtnew26.json', 'w')
+    for i in glob.glob(DIR + "resulttxtnew26/*/*.wav"):
         txt = "".join([line.strip() for line in open(i[:-3] + "txt").readlines()])
         txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
         for k, v in special_2_normal.items():
@@ -443,9 +443,9 @@ if __name__ == '__main__':
 
     # search_2_word()
 
-    client_2_word()
+    #client_2_word()
 
-    #xiaoshuo_2_word()
+    xiaoshuo_2_word()
 
     # py_2_phone()
     # zi_2_phone()
