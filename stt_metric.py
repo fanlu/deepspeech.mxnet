@@ -5,8 +5,8 @@ import numpy as np
 # import editdistance
 from label_util import LabelUtil
 from log_util import LogUtil
-from ctc_beam_search_decoder import ctc_beam_search_decoder
-
+from ctc_beam_search_decoder import ctc_beam_search_decoder, ctc_beam_search_decoder_log
+import kenlm
 
 # import tensorflow as tf
 # from tensorflow.python.framework import ops
@@ -98,6 +98,7 @@ class EvalSTTMetric(STTMetric):
         super(EvalSTTMetric, self).__init__(batch_size=batch_size, num_gpu=num_gpu, is_epoch_end=is_epoch_end,
                                             is_logging=is_logging)
         self.placeholder = ""
+        self.model = kenlm.Model('/export/aiplatform/fanlu/sougou_2.binary')
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -122,19 +123,19 @@ class EvalSTTMetric(STTMetric):
             p = pred_best(p)
             # print(probs)
             import time
-            # import kenlm
-            # model = kenlm.Model('/Users/lonica/Downloads/sougou_2.binary')
+
             st = time.time()
-            beam_result = ctc_beam_search_decoder(
+            beam_size = 3
+            beam_result = ctc_beam_search_decoder_log(
                 probs_seq=probs,
-                beam_size=3,
+                beam_size=beam_size,
                 vocabulary=labelUtil.byIndex,
                 blank_id=0,
                 cutoff_prob=0.9,
-                # ext_scoring_func=model.score
+                ext_scoring_func=self.model.score
             )
             st1 = time.time() - st
-            for index in range(3):
+            for index in range(beam_size):
                 res_str += beam_result[index][1] + "\n"
             print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
 

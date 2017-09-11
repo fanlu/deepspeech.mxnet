@@ -11,10 +11,10 @@ import time
 sess = tf.Session()
 input_pt = tf.placeholder(tf.float32, shape=(100, 1, 29))
 decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(input_pt,
-                                                               [100],
-                                                               beam_width=5,
-                                                               top_paths=1,
-                                                               merge_repeated=False)
+                                                           [100],
+                                                           beam_width=5,
+                                                           top_paths=1,
+                                                           merge_repeated=False)
 
 vocab_list = ['\'', ' '] + [chr(i) for i in range(97, 123)]
 
@@ -70,45 +70,50 @@ def t_beam_search_decoder():
     st1 = time.time() - st
     print("time spent is %.4f" % st1)
     # run original CTC beam search decoder
+    import kenlm
+    model = kenlm.Model('/Users/lonica/Downloads/sougou_2.binary')
     # beam_result = ctc_beam_search_decoder(
-    #   probs_seq=input_prob_matrix_0,
-    #   beam_size=beam_size,
-    #   vocabulary=vocab_list,
-    #   blank_id=len(vocab_list),
-    #   cutoff_prob=1.0,
+    #     probs_seq=input_prob_matrix_0,
+    #     beam_size=beam_size,
+    #     vocabulary=vocab_list,
+    #     blank_id=len(vocab_list),
+    #     cutoff_prob=1.0,
+    #     ext_scoring_func=model.score
     # )
     #
     # # run log- CTC beam search decoder
-    # beam_result_log = ctc_beam_search_decoder_log(
-    #   probs_seq=input_prob_matrix_0,
-    #   beam_size=beam_size,
-    #   vocabulary=vocab_list,
-    #   blank_id=len(vocab_list),
-    #   cutoff_prob=1.0,
-    # )
+    beam_result_log = ctc_beam_search_decoder_log(
+        probs_seq=input_prob_matrix_0,
+        beam_size=beam_size,
+        vocabulary=vocab_list,
+        blank_id=len(vocab_list),
+        cutoff_prob=1.0,
+        ext_scoring_func=model.score
+    )
     # compare decoding result
     # print(
     #   "{tf-decoder log probs} \t {org-decoder log probs} \t{log-decoder log probs}:  {tf_decoder result}  {org_decoder result} {log-decoder result}")
-    # for index in range(num_results_per_sample):
-    #   tf_result = ''.join([vocab_list[i] for i in tf_decoded[index].values])
+    for index in range(num_results_per_sample):
+        print(beam_result_log[index][1])
+        #   tf_result = ''.join([vocab_list[i] for i in tf_decoded[index].values])
 
-    # print(('%6f\t%f\t%f:"%s","%s","%s"') % (tf_log_probs[0][index], beam_result[index][0], beam_result_log[index][0],
-    #       tf_result, beam_result[index][1], beam_result_log[index][1]))
+        # print(('%6f\t%f\t%f:"%s","%s","%s"') % (tf_log_probs[0][index], beam_result[index][0], beam_result_log[index][0],
+        #       tf_result, beam_result[index][1], beam_result_log[index][1]))
 
-    # tf_result_g = ''.join([vocab_list[i] for i in tf_decoded_g[0].values])
-    # print("greedy search %.2f '%s'" % (tf_log_probs_g[0][0], tf_result_g))
-    # import torch
-    # import pytorch_ctc
-    #
-    # scorer = pytorch_ctc.Scorer()
-    # decoder = pytorch_ctc.CTCBeamDecoder(scorer, vocab_list, top_paths=3, beam_width=20,
-    #                          blank_index=0, space_index=28, merge_repeated=False)
-    #
-    # output, score, out_seq_len = decoder.decode(input_prob_matrix_0, sizes=None)
-    # print(output, score, out_seq_len)
+        # tf_result_g = ''.join([vocab_list[i] for i in tf_decoded_g[0].values])
+        # print("greedy search %.2f '%s'" % (tf_log_probs_g[0][0], tf_result_g))
+        # import torch
+        # import pytorch_ctc
+        #
+        # scorer = pytorch_ctc.Scorer()
+        # decoder = pytorch_ctc.CTCBeamDecoder(scorer, vocab_list, top_paths=3, beam_width=20,
+        #                          blank_index=0, space_index=28, merge_repeated=False)
+        #
+        # output, score, out_seq_len = decoder.decode(input_prob_matrix_0, sizes=None)
+        # print(output, score, out_seq_len)
 
 
 if __name__ == '__main__':
-    for i in range(1000):
+    # for i in range(1000):
 
-        t_beam_search_decoder()
+    t_beam_search_decoder()
