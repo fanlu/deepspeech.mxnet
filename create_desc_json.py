@@ -1,4 +1,4 @@
-# encoding=utf-8
+# -- coding: utf-8 --
 """
 Use this script to create JSON-Line description files that can be used to
 train deep-speech models through this library.
@@ -27,6 +27,7 @@ import thulac
 thu1 = thulac.thulac(seg_only=True)
 _data_path = "/Users/lonica/Downloads/"
 # _data_path = "/export/fanlu/aishell/"
+_data_path = "/export/aiplatform/"
 
 word_2_lexicon = defaultdict(list)
 
@@ -387,15 +388,18 @@ def xiaoshuo_2_word():
         d.add(line.rsplit(",", 1)[0])
     special_2_normal = {'\xe3\x80\x80': "", '\xef\xb9\x92': "", '\xe3\x80\x8d': "", '\xe3\x80\x8c': "",
                         '\xee\x80\x84': "", "'": "", '\xc2\xa0': "", '\xe3\x80\x8e': "",
-                        "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", "\\": "", ")": "", '\xe3\x80\x8f': "", '\xe2\x80\x95': '',
+                        "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", "\\": "", ")": "", '\xe3\x80\x8f': "",
+                        '\xe2\x80\x95': '',
                         '\xee\x97\xa5': '', '\xef\xbf\xbd': '', '\xef\xbc\x8e': '',
                         '|': '', '\xe2\x94\x80': '', "s\xc3\xa8": "色", "r\xc3\xac": "日", 'r\xc7\x94': "乳",
                         '\xe5\xa6\xb3': "你", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春",
                         'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
                         '\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴',
-                        '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "", '\xe5\xa9\xac': '淫', '\xe4\xbe\x86': '来',
-			'\xe6\xb2\x92': '没', '\xe2\x80\xa2': "", '\xe2\x95\x94': "", '\xe2\x95\x95': "", '\xe2\x95\xa0': "",
-			'\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出', '\xe2\x95\x97': '',
+                        '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "", '\xe5\xa9\xac': '淫',
+                        '\xe4\xbe\x86': '来',
+                        '\xe6\xb2\x92': '没', '\xe2\x80\xa2': "", '\xe2\x95\x94': "", '\xe2\x95\x95': "",
+                        '\xe2\x95\xa0': "",
+                        '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出', '\xe2\x95\x97': '',
                         }
     DIR = "/export/aiplatform/"
     out_file = open(DIR + 'resulttxtnew26.json', 'w')
@@ -426,16 +430,19 @@ def xiaoshuo_2_word():
 
 
 def check_biaozhu():
-    f = "/export/aiplatform/bdp1.txt"
+    f = _data_path + "bdp1.txt"
     import json
     count = 0
     all = 0
     amount = 0
-    f2 = open("/export/aiplatform/bdp2.txt", "w")
-    for i in open(f, 'r').readlines():
+    import codecs
+    wfobj = codecs.open(_data_path + "bdp2.txt", 'w', encoding="utf-8")
+    # f2 = open(_data_path + "bdp2.txt", "w")
+    for i in open(f).readlines():
         d = json.loads(i.strip())
         manual = d.get("manual", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".", "")
-        machine = d.get("machine", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".", "")
+        machine = d.get("machine", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".",
+                                                                                                  "")
         if "A" not in manual and "B" not in manual and "C" not in manual and "D" not in manual and "E" not in manual:
             manuals = generate_zi_label(manual)
             machines = generate_zi_label(machine)
@@ -449,10 +456,11 @@ def check_biaozhu():
             audio.close()
             if duration > 16:
                 continue
-            line = "{\"key\":\"" + wav_file + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join([m.decode("utf-8") for m in manuals]) + "\"}"
-            f2.write(line + "\n")
-    f2.close()
-    print("amount: %d, error: %d, all: %d, cer: %.4f" % (amount, count, all, count/float(all)))
+            c = {"key": wav_file, "duration": str(duration), "text": " ".join([m.decode("utf-8") for m in manuals])}
+            # line = "{\"key\":\"" + wav_file + "\", \"duration\": " + str(1) + ", \"text\":\"" + " ".join([m.decode("utf-8") for m in manuals]) + "\"}"
+            wfobj.write(json.dumps(c, ensure_ascii=False) + "\n")
+    wfobj.close()
+    print("amount: %d, error: %d, all: %d, cer: %.4f" % (amount, count, all, count / float(all)))
 
 
 if __name__ == '__main__':
@@ -474,7 +482,7 @@ if __name__ == '__main__':
 
     # search_2_word()
 
-    #client_2_word()
+    # client_2_word()
 
     # xiaoshuo_2_word()
 
