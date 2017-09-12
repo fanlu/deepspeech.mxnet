@@ -38,7 +38,7 @@ def t_beam_search_decoder():
     max_time_steps = 100
     probs_dim = len(vocab_list) + 1
     beam_size = 5
-    num_results_per_sample = 1
+    num_results_per_sample = 3
 
     input_prob_matrix_0 = np.asarray(generate_probs(max_time_steps, probs_dim), dtype=np.float32)
     # input_prob_matrix_0 = np.asarray(generate_probs1(), dtype=np.float32)
@@ -72,14 +72,14 @@ def t_beam_search_decoder():
     # run original CTC beam search decoder
     import kenlm
     model = kenlm.Model('/Users/lonica/Downloads/sougou_2.binary')
-    # beam_result = ctc_beam_search_decoder(
-    #     probs_seq=input_prob_matrix_0,
-    #     beam_size=beam_size,
-    #     vocabulary=vocab_list,
-    #     blank_id=len(vocab_list),
-    #     cutoff_prob=1.0,
-    #     ext_scoring_func=model.score
-    # )
+    beam_result = ctc_beam_search_decoder(
+        probs_seq=input_prob_matrix_0,
+        beam_size=beam_size,
+        vocabulary=vocab_list,
+        blank_id=len(vocab_list),
+        cutoff_prob=1.0,
+        ext_scoring_func=model.score
+    )
     #
     # # run log- CTC beam search decoder
     beam_result_log = ctc_beam_search_decoder_log(
@@ -93,7 +93,9 @@ def t_beam_search_decoder():
     # compare decoding result
     # print(
     #   "{tf-decoder log probs} \t {org-decoder log probs} \t{log-decoder log probs}:  {tf_decoder result}  {org_decoder result} {log-decoder result}")
-    for index in range(num_results_per_sample):
+    for index in range(len(beam_result)):
+        print("bm", beam_result[index][1])
+    for index in range(len(beam_result_log)):
         print(beam_result_log[index][1])
         #   tf_result = ''.join([vocab_list[i] for i in tf_decoded[index].values])
 

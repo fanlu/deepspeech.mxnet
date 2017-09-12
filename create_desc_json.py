@@ -21,6 +21,7 @@ import random
 import pypinyin
 from stt_phone_util import generate_zi_label, strQ2B
 from sentence2phoneme import sentence2phoneme, loadmap
+from stt_metric import levenshtein_distance
 import thulac
 
 thu1 = thulac.thulac(seg_only=True)
@@ -424,6 +425,36 @@ def xiaoshuo_2_word():
     out_file.close()
 
 
+def check_biaozhu():
+    f = "/export/aiplatform/bdp1.txt"
+    import json
+    count = 0
+    all = 0
+    amount = 0
+    f2 = open("/export/aiplatform/bdp2.txt", "w")
+    for i in open(f, 'r').readlines():
+        d = json.loads(i.strip())
+        manual = d.get("manual", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".", "")
+        machine = d.get("machine", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".", "")
+        if "A" not in manual and "B" not in manual and "C" not in manual and "D" not in manual and "E" not in manual:
+            manuals = generate_zi_label(manual)
+            machines = generate_zi_label(machine)
+            l_distance = levenshtein_distance(manuals, machines)
+            count += l_distance
+            all += len(manuals)
+            amount += 1
+            wav_file = "/export/aiplatform/data_label/task0/" + d.get("name", "")
+            audio = wave.open(i)
+            duration = float(audio.getnframes()) / audio.getframerate()
+            audio.close()
+            if duration > 16:
+                continue
+            line = "{\"key\":\"" + wav_file + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(manuals) + "\"}"
+            f2.write(line + "\n")
+    f2.close()
+    print("amount: %d, error: %d, all: %d, cer: %.4f" % (amount, count, all, count/float(all)))
+
+
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser()
     # parser.add_argument('data_directory', type=str,
@@ -445,7 +476,9 @@ if __name__ == '__main__':
 
     #client_2_word()
 
-    xiaoshuo_2_word()
+    # xiaoshuo_2_word()
+
+    check_biaozhu()
 
     # py_2_phone()
     # zi_2_phone()
