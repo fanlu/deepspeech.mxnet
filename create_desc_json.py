@@ -444,12 +444,12 @@ def check_biaozhu():
             all += len(manuals)
             amount += 1
             wav_file = "/export/aiplatform/data_label/task0/" + d.get("name", "")
-            audio = wave.open(i)
+            audio = wave.open(wav_file)
             duration = float(audio.getnframes()) / audio.getframerate()
             audio.close()
             if duration > 16:
                 continue
-            line = "{\"key\":\"" + wav_file + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(manuals) + "\"}"
+            line = "{\"key\":\"" + wav_file + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join([m.decode("utf-8") for m in manuals]) + "\"}"
             f2.write(line + "\n")
     f2.close()
     print("amount: %d, error: %d, all: %d, cer: %.4f" % (amount, count, all, count/float(all)))
