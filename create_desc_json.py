@@ -16,6 +16,7 @@ import json
 import os
 import wave
 import glob
+import string
 from collections import defaultdict
 import random
 import pypinyin
@@ -24,12 +25,47 @@ from sentence2phoneme import sentence2phoneme, loadmap
 from stt_metric import levenshtein_distance
 import thulac
 
-thu1 = thulac.thulac(seg_only=True)
 _data_path = "/Users/lonica/Downloads/"
 # _data_path = "/export/fanlu/aishell/"
 _data_path = "/export/aiplatform/"
 
 word_2_lexicon = defaultdict(list)
+
+# special_2_normal = {'\xe3\x80\x80': "", '\xef\xb9\x92': "", '\xe3\x80\x8d': "", '\xe3\x80\x8c': "",
+#                     '\xee\x80\x84': "", "'": "", '\xc2\xa0': "", '\xe3\x80\x8e': "",
+#                     "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", "\\": "", ")": "", '\xe3\x80\x8f': "",
+#                     '\xe2\x80\x95': '',
+#                     '\xee\x97\xa5': '', '\xef\xbf\xbd': '', '\xef\xbc\x8e': '',
+#                     '|': '', '\xe2\x94\x80': '', "s\xc3\xa8": "色", "r\xc3\xac": "日", 'r\xc7\x94': "乳",
+#                     '\xe5\xa6\xb3': "你", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春",
+#                     'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
+#                     '\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴',
+#                     '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "", '\xe5\xa9\xac': '淫',
+#                     '\xe4\xbe\x86': '来',
+#                     '\xe6\xb2\x92': '没', '\xe2\x80\xa2': "", '\xe2\x95\x94': "", '\xe2\x95\x95': "",
+#                     '\xe2\x95\xa0': "",
+#                     '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出', '\xe2\x95\x97': '',
+#                     }
+
+special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xef\xbb\xbf': "", '\xe4\xba\xa3': "",
+                    '\xe4\xb8\xb5': "", '\xee\x97\xa5': '', '\xef\xbf\xbd': '',
+                    "s\xc3\xa8": "色", "r\xc3\xac": "日", 'r\xc7\x94': "乳", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精",
+                    'ch\xc5\xabn': "春", 'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
+                    '\xe9\xa8\xb7': '骚', '\xe5\xa9\xac': '淫', '\xe9\x99\xbd': '阳', '\xe9\x99\xb0': '阴',
+                    '\xe6\xa7\x8d': '枪', '\xe4\xbe\x86': '来', '\xe5\xa6\xb3': "你", '\xe3\x80\x87': '零',
+                    '\xe6\xb2\x92': '没', '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出',
+                    }
+
+
+def deletePunc(mystr):
+    mystr = mystr.translate(None, string.punctuation)
+    for k in "，。？！、【】：；‘“”’（）《》…─﹒╠―•╙╖╔╗╘╕．『』「」".decode("utf-8"):
+        mystr = mystr.replace(k.encode("utf-8"), "")
+    for k, v in special_2_normal.items():
+        mystr = mystr.replace(k, v)
+    # identity = string.maketrans(' ', ' ')
+
+    return mystr
 
 
 def read_lexicon():
@@ -192,6 +228,7 @@ def pinyin_2_phone():
 
 
 def word_2_pinyin(file_path):
+    thu1 = thulac.thulac(seg_only=True)
     lines = open(file_path).readlines()
     with open("resources/" + file_path.rsplit("/")[1].split(".")[0] + "_py.json", 'w') as out_file:
         for line in lines:
@@ -386,21 +423,7 @@ def xiaoshuo_2_word():
     d = set()
     for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
         d.add(line.rsplit(",", 1)[0])
-    special_2_normal = {'\xe3\x80\x80': "", '\xef\xb9\x92': "", '\xe3\x80\x8d': "", '\xe3\x80\x8c': "",
-                        '\xee\x80\x84': "", "'": "", '\xc2\xa0': "", '\xe3\x80\x8e': "",
-                        "\"": "", '\xef\xbb\xbf': "", ",": "", "。": "", "，": "", "\\": "", ")": "", '\xe3\x80\x8f': "",
-                        '\xe2\x80\x95': '',
-                        '\xee\x97\xa5': '', '\xef\xbf\xbd': '', '\xef\xbc\x8e': '',
-                        '|': '', '\xe2\x94\x80': '', "s\xc3\xa8": "色", "r\xc3\xac": "日", 'r\xc7\x94': "乳",
-                        '\xe5\xa6\xb3': "你", 'x\xc3\xacng': "性", 'j\xc4\xabng': "精", 'ch\xc5\xabn': "春",
-                        'sh\xc3\xa8': "射", 'y\xc3\xb9': "欲", 'y\xc4\xabn': "阴", 'm\xc3\xa9n': "门",
-                        '\xe3\x80\x87': '零', '\xe9\x99\xbd': '阳', '\xe6\xa7\x8d': '枪', '\xe9\x99\xb0': '阴',
-                        '\xe9\xa8\xb7': '骚', '\xe4\xba\xa3': "", '\xe4\xb8\xb5': "", '\xe5\xa9\xac': '淫',
-                        '\xe4\xbe\x86': '来',
-                        '\xe6\xb2\x92': '没', '\xe2\x80\xa2': "", '\xe2\x95\x94': "", '\xe2\x95\x95': "",
-                        '\xe2\x95\xa0': "",
-                        '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出', '\xe2\x95\x97': '',
-                        }
+
     DIR = "/export/aiplatform/"
     out_file = open(DIR + 'resulttxtnew26.json', 'w')
     for i in glob.glob(DIR + "resulttxtnew26/*/*.wav"):
@@ -442,7 +465,7 @@ def check_biaozhu():
         d = json.loads(i.strip())
         manual = d.get("manual", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".", "")
         machine = d.get("machine", "").encode("utf-8").replace("，", "").replace("。", "").replace(",", "").replace(".",
-                                                                                                  "")
+                                                                                                                  "")
         if "A" not in manual and "B" not in manual and "C" not in manual and "D" not in manual and "E" not in manual:
             manuals = generate_zi_label(manual)
             machines = generate_zi_label(machine)
@@ -486,8 +509,9 @@ if __name__ == '__main__':
 
     # xiaoshuo_2_word()
 
-    check_biaozhu()
-
-    # py_2_phone()
-    # zi_2_phone()
-    # word_2_pinyin('resources/aishell_validation.json')
+    # check_biaozhu()
+    for k, v in special_2_normal.items():
+        print(k)
+        # py_2_phone()
+        # zi_2_phone()
+        # word_2_pinyin('resources/aishell_validation.json')
