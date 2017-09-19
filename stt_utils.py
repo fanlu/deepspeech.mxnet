@@ -115,7 +115,7 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
     if (os.path.isfile(csvfilename) is False) or overwrite:
         with soundfile.SoundFile(filename) as sound_file:
             audio = sound_file.read(dtype='float32')
-            if random.random() < noise_percent and "aiplatform" not in filename:
+            if random.random() < noise_percent:
                 start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
                 audio = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
             sample_rate = sound_file.samplerate
