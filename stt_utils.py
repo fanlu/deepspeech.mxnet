@@ -116,7 +116,7 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
                 if seq_length != -1:
                     max_length = seq_length * sound_file.samplerate / 100
                     bg = np.zeros((max_length,))
-                    rand_start = random.randint(0, max_length - audio.shape[0])
+                    rand_start = random.randint(0, max(0, max_length - audio.shape[0]))
                     bg[rand_start:rand_start + audio.shape[0]] = audio
                     audio = bg
                 start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
