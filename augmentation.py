@@ -6,6 +6,7 @@ import glob
 import random
 import time
 import soundfile as sf
+import math
 from scipy.stats import randint as sp_randint
 from scipy.stats.distributions import uniform, norm
 from sklearn.model_selection import ParameterGrid, ParameterSampler
@@ -168,21 +169,23 @@ if __name__ == "__main__":
     noise_work, sr2 = sf.read('/Users/lonica/Downloads/noise_work.wav', dtype='float32')
     # noise_work, sr2 = librosa.load('/Users/lonica/Downloads/noise_work.wav')
     st = time.time()
-    for w in wavs[300:400]:
+    for w in wavs[300:305]:
         path, name = w.rsplit('/', 1)
         outputfile = path + '/' + name.split('.')[0] + "-" + str(1) + "-" + 'work.wav'
         # aug(w, '/Users/lonica/Downloads/noise_work.wav', outputfile, 3, 1)
 
         audio, sr1 = sf.read(w, dtype='float32')
-
+        max_length = int(math.ceil(audio.shape[0] / float(sr1)) * sr1)
         # audio, sr1 = librosa.load(w)
-
-
+        bg = np.zeros((max_length,))
+        rand_start = random.randint(1, max_length - audio.shape[0] - 1)
+        bg[rand_start:rand_start + audio.shape[0]] = audio
+        audio = bg
         start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
         result_a = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
 
         # it's very slowly 100/5.48s
-        result_a = librosa.effects.time_stretch(result_a, random.randint(8, 12) / float(10.))
+        # result_a = librosa.effects.time_stretch(result_a, random.randint(8, 12) / float(10.))
 
         # librosa.output.write_wav(outputfile, result_a, sr1)
         #

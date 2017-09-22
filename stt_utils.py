@@ -96,7 +96,7 @@ def spectrogram(samples, fft_length=256, sample_rate=2, hop_length=128):
 
 def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
                           eps=1e-14, overwrite=False, save_feature_as_csvfile=False,
-                          noise_percent=0.4):
+                          noise_percent=0.4, seq_length=-1):
     """ Calculate the log of linear spectrogram from FFT energy
     Params:
         filename (str): Path to the audio file
@@ -109,13 +109,16 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
 
     filename = filename.encode("utf-8")
     csvfilename = filename[:-3] + "csv"
-    #print(1)
-    #print(csvfilename)
-    #print(2)
     if (os.path.isfile(csvfilename) is False) or overwrite:
         with soundfile.SoundFile(filename) as sound_file:
             audio = sound_file.read(dtype='float32')
             if random.random() < noise_percent:
+                if seq_length != -1:
+                    max_length = seq_length * sound_file.samplerate / 100
+                    bg = np.zeros((max_length,))
+                    rand_start = random.randint(1, max_length - audio.shape[0] - 1)
+                    bg[rand_start:rand_start + audio.shape[0]] = audio
+                    audio = bg
                 start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
                 audio = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
             sample_rate = sound_file.samplerate

@@ -7,6 +7,9 @@ import random
 import socket
 from io import open
 import numpy as np
+import concurrent.futures
+import time
+
 from stt_utils import calc_feat_dim, spectrogram_from_file
 
 from config_util import generate_file_path
@@ -55,7 +58,7 @@ class DataGenerator(object):
         self.feats_mean = feats_mean
         self.feats_std = feats_std
 
-    def featurize(self, audio_clip, overwrite=False, save_feature_as_csvfile=False, noise_percent=0.4):
+    def featurize(self, audio_clip, overwrite=False, save_feature_as_csvfile=False, noise_percent=0.4, seq_length=-1):
         """ For a given audio clip, calculate the log of its Fourier Transform
         Params:
             audio_clip(str): Path to the audio clip
@@ -63,7 +66,7 @@ class DataGenerator(object):
         return spectrogram_from_file(
             audio_clip, step=self.step, window=self.window,
             max_freq=self.max_freq, overwrite=overwrite,
-            save_feature_as_csvfile=save_feature_as_csvfile, noise_percent=noise_percent)
+            save_feature_as_csvfile=save_feature_as_csvfile, noise_percent=noise_percent, seq_length=seq_length)
 
     def load_metadata_from_desc_file(self, desc_file, partition='train',
                                      max_duration=16.0, ):
@@ -182,7 +185,7 @@ class DataGenerator(object):
         # Fourier Transform of the audio
         features = [
             self.featurize(a, overwrite=overwrite, save_feature_as_csvfile=save_feature_as_csvfile,
-                           noise_percent=noise_percent) for a in
+                           noise_percent=noise_percent, seq_length=seq_length) for a in
             audio_paths]
         input_lengths = [f.shape[0] for f in features]
         feature_dim = features[0].shape[1]
@@ -296,14 +299,51 @@ class DataGenerator(object):
 
 if __name__ == "__main__":
     log = LogUtil().getlogger()
-    with open("/Users/lonica/Downloads/resulttxt_1.json", 'rt', encoding='UTF-8') as json_line_file:
-        for line_num, json_line in enumerate(json_line_file):
+    # with open("/Users/lonica/Downloads/resulttxt_1.json", 'rt', encoding='UTF-8') as json_line_file:
+    #     for line_num, json_line in enumerate(json_line_file):
+    #         try:
+    #             spec = json.loads(json_line)
+    #         except Exception as e:
+    #             print(json_line)
+    #             log.warn('Error reading line #{}: {}'.format(line_num, json_line))
+    #             log.warn(str(e))
+
+    def deal(threadIndex, path, return_dict):
+        return_dict[threadIndex] = {"path": path}
+    def deal_file(f):
+        if random.random() < 0.5:
+            time.sleep(0.01)
+        return {"f": f}
+
+    audio_paths = range(100)
+
+    manager = Manager()
+    return_dict = manager.dict()
+    jobs = []
+    for threadIndex in range(cpu_count()):
+        proc = Process(target=deal,
+                       args=(threadIndex, audio_paths, return_dict))
+        jobs.append(proc)
+        proc.start()
+    for proc in jobs:
+        proc.join()
+    for v in return_dict.values():
+        print(v)
+    result = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count() - 2) as executor:
+        future_to_f = {executor.submit(deal_file, f): f for f in audio_paths}
+        for future in concurrent.futures.as_completed(future_to_f):
+            f = future_to_f[future]
             try:
-                spec = json.loads(json_line)
-            except Exception as e:
-                print(json_line)
-                log.warn('Error reading line #{}: {}'.format(line_num, json_line))
-                log.warn(str(e))
+                data = future.result()
+                result.append(data)
+            except Exception as exc:
+                print('%r generated an exception: %s' % (f, exc))
+            else:
+                print('%r file ' % f)
+    # for r in result:
+    #     print(r)
+    print(result)
     # datagen = DataGenerator("test", "test1")
     # datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/103-1240-0000.wav", overwrite=True, save_feature_as_csvfile=True)
