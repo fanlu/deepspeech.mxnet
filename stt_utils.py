@@ -115,10 +115,11 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
             if random.random() < noise_percent:
                 if seq_length != -1:
                     max_length = seq_length * sound_file.samplerate / 100
-                    bg = np.zeros((max_length,))
-                    rand_start = random.randint(0, max(0, max_length - audio.shape[0]))
-                    bg[rand_start:rand_start + audio.shape[0]] = audio
-                    audio = bg
+                    if audio.shape[0] < max_length:
+                        bg = np.zeros((max_length,))
+                        rand_start = random.randint(0, max_length - audio.shape[0])
+                        bg[rand_start:rand_start + audio.shape[0]] = audio
+                        audio = bg
                 start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
                 audio = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
             sample_rate = sound_file.samplerate
