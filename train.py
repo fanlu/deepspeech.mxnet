@@ -149,16 +149,16 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
 
     if begin_epoch == 0 and mode == 'train':
         module.init_params(initializer=get_initializer(args))
-        model_file = args.config.get('common', 'model_file')
-        model_name = os.path.splitext(model_file)[0]
-        model_num_epoch = int(model_name[-4:])
-        model_path = 'checkpoints/' + str(model_name[:-5])
-        _, arg_params, aux_params = mx.model.load_checkpoint(model_path, model_num_epoch)
+        # model_file = args.config.get('common', 'model_file')
+        # model_name = os.path.splitext(model_file)[0]
+        # model_num_epoch = int(model_name[-4:])
+        # model_path = 'checkpoints/' + str(model_name[:-5])
+        # _, arg_params, aux_params = mx.model.load_checkpoint(model_path, model_num_epoch)
         # arg_params2 = {}
         # for item in arg_params.keys():
         #     if not item.startswith("forward") and not item.startswith("backward") and not item.startswith("rear"):
         #         arg_params2[item] = arg_params[item]
-        module.set_params(arg_params, aux_params, allow_missing=True, allow_extra=True)
+        # module.set_params(arg_params, aux_params, allow_missing=True, allow_extra=True)
 
     lr_scheduler = SimpleLRScheduler(learning_rate=learning_rate)
     # lr, lr_scheduler = _get_lr_scheduler(args, kv)
