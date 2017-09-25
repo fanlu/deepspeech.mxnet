@@ -21,7 +21,7 @@ from multiprocessing import cpu_count, Process, Manager
 
 
 class DataGenerator(object):
-    def __init__(self, save_dir, model_name, step=10, window=20, max_freq=8000, desc_file=None):
+    def __init__(self, save_dir, model_name, step=10, window=20, max_freq=4000, desc_file=None):
         """
         Params:
             step (int): Step size in milliseconds between windows
