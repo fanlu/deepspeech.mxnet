@@ -96,9 +96,8 @@ class DataGenerator(object):
                     # Change to (KeyError, ValueError) or
                     # (KeyError,json.decoder.JSONDecodeError), depending on
                     # json module version
-                    logger.warn('Error reading line #{}: {}'
-                                .format(line_num, json_line))
                     logger.warn(str(e))
+                    logger.warn('Error reading line #{}: {}'.format(line_num, json_line))
 
         if partition == 'train':
             self.count = len(audio_paths)

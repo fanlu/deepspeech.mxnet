@@ -87,6 +87,7 @@ def load_data(args, kv=None):
     model_name = args.config.get('common', 'prefix')
     is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
     zh_type = args.config.get('data', 'zh_type')
+    max_freq = args.config.getint('data', 'max_freq')
     overwrite_meta_files = args.config.getboolean('train', 'overwrite_meta_files')
     overwrite_bi_graphemes_dictionary = args.config.getboolean('train', 'overwrite_bi_graphemes_dictionary')
     max_duration = args.config.getfloat('data', 'max_duration')
@@ -97,7 +98,7 @@ def load_data(args, kv=None):
     if mode == "train" or mode == "load":
         data_json = args.config.get('data', 'train_json')
         val_json = args.config.get('data', 'val_json')
-        datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
+        datagen = DataGenerator(save_dir=save_dir, model_name=model_name, max_freq=max_freq)
         datagen.load_train_data(data_json, max_duration=max_duration)
         datagen.load_validation_data(val_json, max_duration=max_duration)
         if is_bi_graphemes and language == "en":
@@ -134,7 +135,7 @@ def load_data(args, kv=None):
 
     elif mode == 'predict':
         test_json = args.config.get('data', 'test_json')
-        datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
+        datagen = DataGenerator(save_dir=save_dir, model_name=model_name, max_freq=max_freq)
         datagen.load_train_data(test_json, max_duration=max_duration)
         labelutil = load_labelutil(labelUtil, is_bi_graphemes, language="zh", zh_type=zh_type)
         args.config.set('arch', 'n_classes', str(labelUtil.get_count()))

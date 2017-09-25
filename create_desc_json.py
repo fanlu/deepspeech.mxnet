@@ -21,6 +21,8 @@ from collections import defaultdict
 import soundfile as sf
 import random
 import pypinyin
+import time
+
 from stt_phone_util import generate_zi_label, strQ2B
 from sentence2phoneme import sentence2phoneme, loadmap
 from stt_metric import levenshtein_distance
@@ -69,6 +71,19 @@ def deletePunc(mystr):
     return mystr
 
 
+def get_duration_wave(w):
+    audio = wave.open(w)
+    duration = float(audio.getnframes()) / audio.getframerate()
+    audio.close()
+    return duration
+
+
+def get_duration_sf(w):
+    so = sf.SoundFile(w)
+    duration = float(len(so)) / so.samplerate
+    return duration
+
+
 def read_lexicon():
     lines = open(_data_path + "resource_aishell/lexicon.txt").readlines()
     for line in lines:
@@ -99,23 +114,17 @@ def ai_2_phone():
                     print("error word:%s" % r)
         if rs[0][6:11] <= "S0723":
             wav = _data_path + "data_aishell/wav/train/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            audio = wave.open(wav)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            duration = get_duration_wave(wav)
             line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file.write(line + "\n")
         elif rs[0][6:11] <= "S0763":
             wav = _data_path + "data_aishell/wav/dev/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            audio = wave.open(wav)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            duration = get_duration_wave(wav)
             line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file1.write(line + "\n")
         else:
             wav = _data_path + "data_aishell/wav/test/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            audio = wave.open(wav)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            duration = get_duration_wave(wav)
             line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file2.write(line + "\n")
     out_file.close()
@@ -128,11 +137,9 @@ def ai_thchs30_2_word():
     out_file = open(_data_path + "/thchs30/data_thchs30/8k/thchs30_data.json", 'w')
     for w in ori_wavs:
         path, name = w.rsplit("/", 1)
-        rs = open(w.replace("8k","") + ".trn").readlines()[0].strip()
+        rs = open(w.replace("8k", "") + ".trn").readlines()[0].strip()
         ps = generate_zi_label(rs)
-        audio = wave.open(w)
-        duration = float(audio.getnframes()) / audio.getframerate()
-        audio.close()
+        duration = get_duration_wave(w)
         line = "{\"key\":\"" + w + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
         out_file.write(line + "\n")
         # for w2 in glob.glob(path.replace("data","data_aug")+"/" + name.split(".")[0] + "*.wav"):
@@ -152,9 +159,7 @@ def search_2_word():
         path, d, txt = t.split(" ", 2)
         ps = generate_zi_label(txt.strip())
         audio_path = "/export/aiplatform/search/" + "wav/" + path
-        audio = wave.open(audio_path)
-        duration = float(audio.getnframes()) / audio.getframerate()
-        audio.close()
+        duration = get_duration_wave(audio_path)
         line = "{\"key\":\"" + audio_path + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(
             ps) + "\"}"
         out_file.write(line + "\n")
@@ -171,25 +176,19 @@ def ai_2_word():
         ps = generate_zi_label("".join(rs[1:]))
         if rs[0][6:11] <= "S0723":
             wav = _data_path + "data_aishell/wav8000/train/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            #dir = _data_path + "data_aishell/wav/train_aug/" + rs[0][6:11] + "/" + rs[0]
-            #for w in glob.glob(dir + "*.wav"):
-            audio = wave.open(wav)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            # dir = _data_path + "data_aishell/wav/train_aug/" + rs[0][6:11] + "/" + rs[0]
+            # for w in glob.glob(dir + "*.wav"):
+            duration = get_duration_wave(wav)
             line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file.write(line + "\n")
         elif rs[0][6:11] <= "S0763":
             wav = _data_path + "data_aishell/wav8000/dev/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            audio = wave.open(wav)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            duration = get_duration_wave(wav)
             line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file1.write(line + "\n")
         else:
             wav = _data_path + "data_aishell/wav/test/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            audio = wave.open(wav)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            duration = get_duration_wave(wav)
             line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file2.write(line + "\n")
     out_file.close()
@@ -199,9 +198,7 @@ def ai_2_word():
 
 def ai_2_word_single(wav):
     out_file = open("resources/d.json", 'w')
-    audio = wave.open(wav)
-    duration = float(audio.getnframes()) / audio.getframerate()
-    audio.close()
+    duration = get_duration_wave(wav)
     line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"1 1\"}"
     out_file.write(line + "\n")
 
@@ -267,9 +264,7 @@ def main(data_directory, output_file):
                 label = ' '.join(split[1:]).lower()
                 audio_file = os.path.join(speaker_path, speaker,
                                           file_id) + '.wav'
-                audio = wave.open(audio_file)
-                duration = float(audio.getnframes()) / audio.getframerate()
-                audio.close()
+                duration = get_duration_wave(audio_file)
                 keys.append(audio_file)
                 durations.append(duration)
                 labels.append(label)
@@ -289,9 +284,7 @@ def aishell(data_directory, output_file):
                     mic_path = os.path.join(speaker_path, speaker)
                     if os.path.isdir(mic_path):
                         for wav in glob.glob(mic_path + "/*.wav"):
-                            audio = wave.open(wav)
-                            duration = float(audio.getnframes()) / audio.getframerate()
-                            audio.close()
+                            duration = get_duration_wave(wav)
 
                             text = open(wav.replace("wav", "txt")).readlines()[0].strip()
 
@@ -411,9 +404,7 @@ def client_2_word():
     for i, (path, txt) in enumerate(zip(wavs, labels)):
         ps = generate_zi_label(txt.replace(",", "").replace("。", "").replace("，", "").strip())
         audio_path = DIR + path.strip()
-        audio = wave.open(audio_path)
-        duration = float(audio.getnframes()) / audio.getframerate()
-        audio.close()
+        duration = get_duration_wave(audio_path)
         line = "{\"key\":\"" + audio_path + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(
             ps) + "\"}"
         out_file.write(line + "\n")
@@ -428,7 +419,7 @@ def xiaoshuo_2_word():
     DIR = "/export/aiplatform/8k/"
     out_file = open(DIR + 'resulttxtnew26.json', 'w')
     for i in glob.glob(DIR + "resulttxtnew26/*/*.wav"):
-        txt = "".join([line.strip() for line in open(i.replace("8k/","")[:-3] + "txt").readlines()])
+        txt = "".join([line.strip() for line in open(i.replace("8k/", "")[:-3] + "txt").readlines()])
         txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
         ps = generate_zi_label(deletePunc(txt))
         if len(ps) == 0:
@@ -441,11 +432,7 @@ def xiaoshuo_2_word():
                 break
         if flag:
             continue
-	so = sf.SoundFile(i)
-        duration = float(len(so)) / so.samplerate
-        #audio = wave.open(i)
-        #duration = float(audio.getnframes()) / audio.getframerate()
-        #audio.close()
+        duration = get_duration_wave(i)
         if duration > 16:
             continue
         line = "{\"key\":\"" + i + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
@@ -475,9 +462,7 @@ def check_biaozhu():
             all += len(manuals)
             amount += 1
             wav_file = "/export/aiplatform/data_label/task0/" + d.get("name", "")
-            audio = wave.open(wav_file)
-            duration = float(audio.getnframes()) / audio.getframerate()
-            audio.close()
+            duration = get_duration_wave(wav_file)
             if duration > 16:
                 continue
             c = {"key": wav_file, "duration": str(duration), "text": " ".join([m.decode("utf-8") for m in manuals])}
@@ -502,17 +487,24 @@ if __name__ == '__main__':
     # print(len(word_2_lexicon))
     # ai_2_word()
 
-    ai_thchs30_2_word()
-
+    # ai_thchs30_2_word()
+    st = time.time()
+    for i in range(10000):
+        get_duration_sf("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
+    print(time.time()-st)
+    st1 = time.time()
+    for i in range(10000):
+        get_duration_wave("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
+    print(time.time()-st1)
     # search_2_word()
 
     # client_2_word()
 
-    #xiaoshuo_2_word()
+    # xiaoshuo_2_word()
 
     # check_biaozhu()
-    #for k, v in special_2_normal.items():
+    # for k, v in special_2_normal.items():
     #    print(k)
-        # py_2_phone()
-        # zi_2_phone()
-        # word_2_pinyin('resources/aishell_validation.json')
+    # py_2_phone()
+    # zi_2_phone()
+    # word_2_pinyin('resources/aishell_validation.json')
