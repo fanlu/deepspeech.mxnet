@@ -98,7 +98,7 @@ class EvalSTTMetric(STTMetric):
         super(EvalSTTMetric, self).__init__(batch_size=batch_size, num_gpu=num_gpu, is_epoch_end=is_epoch_end,
                                             is_logging=is_logging)
         self.placeholder = ""
-        self.model = kenlm.Model('/export/fanlu/kenlm/build/text2.arpa')
+        self.model = kenlm.Model('/export/aiplatform/fanlu/sougou_2.binary')
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -125,7 +125,7 @@ class EvalSTTMetric(STTMetric):
             import time
 
             st = time.time()
-            beam_size = 3
+            beam_size = 5
             beam_result = ctc_beam_search_decoder_log(
                 probs_seq=probs,
                 beam_size=beam_size,

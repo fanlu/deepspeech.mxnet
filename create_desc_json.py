@@ -18,6 +18,7 @@ import wave
 import glob
 import string
 from collections import defaultdict
+import soundfile as sf
 import random
 import pypinyin
 from stt_phone_util import generate_zi_label, strQ2B
@@ -59,7 +60,7 @@ special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xe
 
 def deletePunc(mystr):
     mystr = mystr.translate(None, string.punctuation)
-    for k in "，。？！、【】：；‘“”’（）《》…─﹒╠―•╙╖╔╗╘╕．『』「」".decode("utf-8"):
+    for k in "，。？！、【】：；‘“”’（）《》…─﹒╠―•╙╖╔╗╘╕．﹒『』「」".decode("utf-8"):
         mystr = mystr.replace(k.encode("utf-8"), "")
     for k, v in special_2_normal.items():
         mystr = mystr.replace(k, v)
@@ -83,9 +84,9 @@ def tvt():
 
 def ai_2_phone():
     lines = open(_data_path + "data_aishell/transcript/aishell_transcript_v0.8.txt").readlines()
-    out_file = open("resources/aishell_train.json", 'w')
-    out_file1 = open("resources/aishell_validation.json", 'w')
-    out_file2 = open("resources/aishell_test.json", 'w')
+    out_file = open(_data_path + "data_aishell/aishell_train_8k.json", 'w')
+    out_file1 = open(_data_path + "data_aishell/aishell_validation_8k.json", 'w')
+    out_file2 = open(_data_path + "data_aishell/aishell_test_8k.json", 'w')
     for line in lines:
         rs = line.strip().split(" ")
         ps = []
@@ -123,11 +124,11 @@ def ai_2_phone():
 
 
 def ai_thchs30_2_word():
-    ori_wavs = glob.glob("/export/fanlu/thchs30/data_thchs30/data/*.wav")
-    out_file = open("resources/thchs30_data.json", 'w')
+    ori_wavs = glob.glob(_data_path + "/thchs30/data_thchs30/8k/data/*.wav")
+    out_file = open(_data_path + "/thchs30/data_thchs30/8k/thchs30_data.json", 'w')
     for w in ori_wavs:
         path, name = w.rsplit("/", 1)
-        rs = open(w + ".trn").readlines()[0].strip()
+        rs = open(w.replace("8k","") + ".trn").readlines()[0].strip()
         ps = generate_zi_label(rs)
         audio = wave.open(w)
         duration = float(audio.getnframes()) / audio.getframerate()
@@ -162,23 +163,23 @@ def search_2_word():
 
 def ai_2_word():
     lines = open(_data_path + "data_aishell/transcript/aishell_transcript_v0.8.txt").readlines()
-    out_file = open("resources/aishell_train_noise.json", 'w')
-    out_file1 = open("resources/aishell_validation_noise.json", 'w')
-    out_file2 = open("resources/aishell_test_noise.json", 'w')
+    out_file = open(_data_path + "data_aishell/wav8000/aishell_train_8k.json", 'w')
+    out_file1 = open(_data_path + "data_aishell/wav8000/aishell_validation_8k.json", 'w')
+    out_file2 = open(_data_path + "data_aishell/wav8000/aishell_test_8k.json", 'w')
     for line in lines:
         rs = line.strip().split(" ")
         ps = generate_zi_label("".join(rs[1:]))
         if rs[0][6:11] <= "S0723":
-            wav = _data_path + "data_aishell/wav/train/" + rs[0][6:11] + "/" + rs[0] + ".wav"
-            dir = _data_path + "data_aishell/wav/train_aug/" + rs[0][6:11] + "/" + rs[0]
-            for w in glob.glob(dir + "*.wav"):
-                audio = wave.open(w)
-                duration = float(audio.getnframes()) / audio.getframerate()
-                audio.close()
-                line = "{\"key\":\"" + w + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
-                out_file.write(line + "\n")
+            wav = _data_path + "data_aishell/wav8000/train/" + rs[0][6:11] + "/" + rs[0] + ".wav"
+            #dir = _data_path + "data_aishell/wav/train_aug/" + rs[0][6:11] + "/" + rs[0]
+            #for w in glob.glob(dir + "*.wav"):
+            audio = wave.open(wav)
+            duration = float(audio.getnframes()) / audio.getframerate()
+            audio.close()
+            line = "{\"key\":\"" + wav + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+            out_file.write(line + "\n")
         elif rs[0][6:11] <= "S0763":
-            wav = _data_path + "data_aishell/wav/dev/" + rs[0][6:11] + "/" + rs[0] + ".wav"
+            wav = _data_path + "data_aishell/wav8000/dev/" + rs[0][6:11] + "/" + rs[0] + ".wav"
             audio = wave.open(wav)
             duration = float(audio.getnframes()) / audio.getframerate()
             audio.close()
@@ -424,14 +425,12 @@ def xiaoshuo_2_word():
     for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
         d.add(line.rsplit(",", 1)[0])
 
-    DIR = "/export/aiplatform/"
+    DIR = "/export/aiplatform/8k/"
     out_file = open(DIR + 'resulttxtnew26.json', 'w')
     for i in glob.glob(DIR + "resulttxtnew26/*/*.wav"):
-        txt = "".join([line.strip() for line in open(i[:-3] + "txt").readlines()])
+        txt = "".join([line.strip() for line in open(i.replace("8k/","")[:-3] + "txt").readlines()])
         txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
-        for k, v in special_2_normal.items():
-            txt = txt.replace(k, v)
-        ps = generate_zi_label(txt)
+        ps = generate_zi_label(deletePunc(txt))
         if len(ps) == 0:
             continue
         flag = False
@@ -442,9 +441,11 @@ def xiaoshuo_2_word():
                 break
         if flag:
             continue
-        audio = wave.open(i)
-        duration = float(audio.getnframes()) / audio.getframerate()
-        audio.close()
+	so = sf.SoundFile(i)
+        duration = float(len(so)) / so.samplerate
+        #audio = wave.open(i)
+        #duration = float(audio.getnframes()) / audio.getframerate()
+        #audio.close()
         if duration > 16:
             continue
         line = "{\"key\":\"" + i + "\", \"duration\": " + str(duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
@@ -501,17 +502,17 @@ if __name__ == '__main__':
     # print(len(word_2_lexicon))
     # ai_2_word()
 
-    # ai_thchs30_2_word()
+    ai_thchs30_2_word()
 
     # search_2_word()
 
     # client_2_word()
 
-    # xiaoshuo_2_word()
+    #xiaoshuo_2_word()
 
     # check_biaozhu()
-    for k, v in special_2_normal.items():
-        print(k)
+    #for k, v in special_2_normal.items():
+    #    print(k)
         # py_2_phone()
         # zi_2_phone()
         # word_2_pinyin('resources/aishell_validation.json')
