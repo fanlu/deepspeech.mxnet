@@ -287,48 +287,53 @@ class DataGenerator(object):
         # return_dict = {}
         # self.preprocess_sample_normalize(1, audio_paths, overwrite, noise_percent, return_dict)
 
-        pool = Pool(processes=cpu_count())
-        results = []
-        for i, f in enumerate(audio_paths):
-            result = pool.apply_async(spectrogram_from_file, args=(f,), kwds={"overwrite":overwrite, "noise_percent":noise_percent})
-            results.append(result)
-        pool.close()
-        pool.join()
-        feat_dim = self.feat_dim
-        feat = np.zeros((1, feat_dim))
-        feat_squared = np.zeros((1, feat_dim))
-        count = 0
-        return_dict = {}
-        for data in results:
-            next_feat = data.get()
-            next_feat_squared = np.square(next_feat)
-            feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
-            feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
-            feat_squared_vertically_stacked = np.concatenate(
-                (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
-            feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
-            count += float(next_feat.shape[0])
-        return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
-
+        # pool = Pool(processes=cpu_count())
+        # results = []
+        # for i, f in enumerate(audio_paths):
+        #     result = pool.apply_async(spectrogram_from_file, args=(f,), kwds={"overwrite":overwrite, "noise_percent":noise_percent})
+        #     results.append(result)
+        # pool.close()
+        # pool.join()
+        # feat_dim = self.feat_dim
+        # feat = np.zeros((1, feat_dim))
+        # feat_squared = np.zeros((1, feat_dim))
+        # count = 0
         # return_dict = {}
-        # with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count()) as executor:
-        #     feat_dim = self.feat_dim
-        #     feat = np.zeros((1, feat_dim))
-        #     feat_squared = np.zeros((1, feat_dim))
-        #     count = 0
-        #     for f, data in zip(audio_paths, executor.map(spectrogram_from_file, audio_paths, overwrite=overwrite, noise_percent=noise_percent)):
-        #         try:
-        #             next_feat = data
-        #             next_feat_squared = np.square(next_feat)
-        #             feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
-        #             feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
-        #             feat_squared_vertically_stacked = np.concatenate(
-        #                 (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
-        #             feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
-        #             count += float(next_feat.shape[0])
-        #         except Exception as exc:
-        #             log.info('%r generated an exception: %s' % (f, exc))
-        #     return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+        # for data in results:
+        #     next_feat = data.get()
+        #     next_feat_squared = np.square(next_feat)
+        #     feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
+        #     feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+        #     feat_squared_vertically_stacked = np.concatenate(
+        #         (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
+        #     feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+        #     count += float(next_feat.shape[0])
+        # return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+
+        return_dict = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
+            feat_dim = self.feat_dim
+            feat = np.zeros((1, feat_dim))
+            feat_squared = np.zeros((1, feat_dim))
+            count = 0
+            future_to_f = {
+            executor.submit(spectrogram_from_file, f, overwrite=overwrite, noise_percent=noise_percent): f for f in
+            audio_paths}
+            for future in concurrent.futures.as_completed(future_to_f):
+                # for f, data in zip(audio_paths, executor.map(spectrogram_from_file, audio_paths, overwrite=overwrite, noise_percent=noise_percent)):
+                f = future_to_f[future]
+                try:
+                    next_feat = future.result()
+                    next_feat_squared = np.square(next_feat)
+                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
+                    feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+                    feat_squared_vertically_stacked = np.concatenate(
+                        (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
+                    feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+                    count += float(next_feat.shape[0])
+                except Exception as exc:
+                    log.info('%r generated an exception: %s' % (f, exc))
+            return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
 
         feat = np.sum(np.vstack([item['feat'] for item in return_dict.values()]), axis=0)
         count = sum([item['count'] for item in return_dict.values()])
