@@ -289,22 +289,18 @@ class DataGenerator(object):
 
         return_dict = {}
         with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count()) as executor:
-            future_to_f = {
-            executor.submit(featurize1, self, file=f, overwrite=overwrite, noise_percent=noise_percent): f for f in
-            audio_paths}
-            dim = 161
-            feat = np.zeros((1, dim))
-            feat_squared = np.zeros((1, dim))
+            feat_dim = self.feat_dim
+            feat = np.zeros((1, feat_dim))
+            feat_squared = np.zeros((1, feat_dim))
             count = 0
-            for future in concurrent.futures.as_completed(future_to_f):
-                f = future_to_f[future]
+            for f, data in zip(audio_paths, executor.map(spectrogram_from_file, audio_paths, overwrite=overwrite, noise_percent=noise_percent)):
                 try:
-                    next_feat = future.result()
+                    next_feat = data
                     next_feat_squared = np.square(next_feat)
-                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, dim)
+                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
                     feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
                     feat_squared_vertically_stacked = np.concatenate(
-                        (feat_squared, next_feat_squared)).reshape(-1, dim)
+                        (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
                     feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
                     count += float(next_feat.shape[0])
                 except Exception as exc:
