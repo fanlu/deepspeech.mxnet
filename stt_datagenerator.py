@@ -17,7 +17,7 @@ from log_util import LogUtil
 from label_util import LabelUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_label
 from stt_phone_util import generate_phone_label, generate_zi_label, generate_py_label
-from multiprocessing import cpu_count, Process, Manager
+from multiprocessing import cpu_count, Process, Manager, Pool
 
 
 class DataGenerator(object):
@@ -266,7 +266,7 @@ class DataGenerator(object):
         log.info("Calculating mean and std from samples")
         # if k_samples is negative then it goes through total dataset
         if k_samples < 0:
-            audio_paths = self.train_audio_paths
+            audio_paths = self.train_audio_paths * 10
 
         # using sample
         else:
@@ -287,25 +287,48 @@ class DataGenerator(object):
         # return_dict = {}
         # self.preprocess_sample_normalize(1, audio_paths, overwrite, noise_percent, return_dict)
 
+        pool = Pool(processes=cpu_count())
+        results = []
+        for i, f in enumerate(audio_paths):
+            result = pool.apply_async(spectrogram_from_file, args=(f,), kwds={"overwrite":overwrite, "noise_percent":noise_percent})
+            results.append(result)
+        pool.close()
+        pool.join()
+        feat_dim = self.feat_dim
+        feat = np.zeros((1, feat_dim))
+        feat_squared = np.zeros((1, feat_dim))
+        count = 0
         return_dict = {}
-        with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count()) as executor:
-            feat_dim = self.feat_dim
-            feat = np.zeros((1, feat_dim))
-            feat_squared = np.zeros((1, feat_dim))
-            count = 0
-            for f, data in zip(audio_paths, executor.map(spectrogram_from_file, audio_paths, overwrite=overwrite, noise_percent=noise_percent)):
-                try:
-                    next_feat = data
-                    next_feat_squared = np.square(next_feat)
-                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
-                    feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
-                    feat_squared_vertically_stacked = np.concatenate(
-                        (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
-                    feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
-                    count += float(next_feat.shape[0])
-                except Exception as exc:
-                    log.info('%r generated an exception: %s' % (f, exc))
-            return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+        for data in results:
+            next_feat = data.get()
+            next_feat_squared = np.square(next_feat)
+            feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
+            feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+            feat_squared_vertically_stacked = np.concatenate(
+                (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
+            feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+            count += float(next_feat.shape[0])
+        return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+
+        # return_dict = {}
+        # with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+        #     feat_dim = self.feat_dim
+        #     feat = np.zeros((1, feat_dim))
+        #     feat_squared = np.zeros((1, feat_dim))
+        #     count = 0
+        #     for f, data in zip(audio_paths, executor.map(spectrogram_from_file, audio_paths, overwrite=overwrite, noise_percent=noise_percent)):
+        #         try:
+        #             next_feat = data
+        #             next_feat_squared = np.square(next_feat)
+        #             feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
+        #             feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+        #             feat_squared_vertically_stacked = np.concatenate(
+        #                 (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
+        #             feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+        #             count += float(next_feat.shape[0])
+        #         except Exception as exc:
+        #             log.info('%r generated an exception: %s' % (f, exc))
+        #     return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
 
         feat = np.sum(np.vstack([item['feat'] for item in return_dict.values()]), axis=0)
         count = sum([item['count'] for item in return_dict.values()])
