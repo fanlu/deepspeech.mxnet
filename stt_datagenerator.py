@@ -266,23 +266,50 @@ class DataGenerator(object):
         log.info("Calculating mean and std from samples")
         # if k_samples is negative then it goes through total dataset
         if k_samples < 0:
-            audio_paths = self.audio_paths
+            audio_paths = self.train_audio_paths
 
         # using sample
         else:
             k_samples = min(k_samples, len(self.train_audio_paths))
             samples = self.rng.sample(self.train_audio_paths, k_samples)
             audio_paths = samples
-        manager = Manager()
-        return_dict = manager.dict()
-        jobs = []
-        for threadIndex in range(cpu_count()):
-            proc = Process(target=self.preprocess_sample_normalize,
-                           args=(threadIndex, audio_paths, overwrite, noise_percent, return_dict))
-            jobs.append(proc)
-            proc.start()
-        for proc in jobs:
-            proc.join()
+        # manager = Manager()
+        # return_dict = manager.dict()
+        # jobs = []
+        # for threadIndex in range(cpu_count()):
+        #     proc = Process(target=self.preprocess_sample_normalize,
+        #                    args=(threadIndex, audio_paths, overwrite, noise_percent, return_dict))
+        #     jobs.append(proc)
+        #     proc.start()
+        # for proc in jobs:
+        #     proc.join()
+
+        # return_dict = {}
+        # self.preprocess_sample_normalize(1, audio_paths, overwrite, noise_percent, return_dict)
+
+        return_dict = {}
+        with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+            future_to_f = {
+            executor.submit(featurize1, self, file=f, overwrite=overwrite, noise_percent=noise_percent): f for f in
+            audio_paths}
+            dim = 161
+            feat = np.zeros((1, dim))
+            feat_squared = np.zeros((1, dim))
+            count = 0
+            for future in concurrent.futures.as_completed(future_to_f):
+                f = future_to_f[future]
+                try:
+                    next_feat = future.result()
+                    next_feat_squared = np.square(next_feat)
+                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, dim)
+                    feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+                    feat_squared_vertically_stacked = np.concatenate(
+                        (feat_squared, next_feat_squared)).reshape(-1, dim)
+                    feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+                    count += float(next_feat.shape[0])
+                except Exception as exc:
+                    log.info('%r generated an exception: %s' % (f, exc))
+            return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
 
         feat = np.sum(np.vstack([item['feat'] for item in return_dict.values()]), axis=0)
         count = sum([item['count'] for item in return_dict.values()])
@@ -297,6 +324,10 @@ class DataGenerator(object):
         log.info("End calculating mean and std from samples")
 
 
+def featurize1(datagen, file=None, overwrite=False, noise_percent=0.4):
+    return datagen.featurize(file, overwrite=overwrite, noise_percent=noise_percent)
+
+
 if __name__ == "__main__":
     log = LogUtil().getlogger()
     # with open("/Users/lonica/Downloads/resulttxt_1.json", 'rt', encoding='UTF-8') as json_line_file:
@@ -308,43 +339,47 @@ if __name__ == "__main__":
     #             log.warn('Error reading line #{}: {}'.format(line_num, json_line))
     #             log.warn(str(e))
 
-    def deal(threadIndex, path, return_dict):
-        return_dict[threadIndex] = {"path": path}
-    def deal_file(f):
-        if random.random() < 0.5:
-            time.sleep(0.01)
-        return {"f": f}
-
-    audio_paths = range(100)
-
-    manager = Manager()
-    return_dict = manager.dict()
-    jobs = []
-    for threadIndex in range(cpu_count()):
-        proc = Process(target=deal,
-                       args=(threadIndex, audio_paths, return_dict))
-        jobs.append(proc)
-        proc.start()
-    for proc in jobs:
-        proc.join()
-    for v in return_dict.values():
-        print(v)
-    result = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count() - 2) as executor:
-        future_to_f = {executor.submit(deal_file, f): f for f in audio_paths}
-        for future in concurrent.futures.as_completed(future_to_f):
-            f = future_to_f[future]
-            try:
-                data = future.result()
-                result.append(data)
-            except Exception as exc:
-                print('%r generated an exception: %s' % (f, exc))
-            else:
-                print('%r file ' % f)
-    # for r in result:
-    #     print(r)
-    print(result)
-    # datagen = DataGenerator("test", "test1")
+    # def deal(threadIndex, path, return_dict):
+    #     return_dict[threadIndex] = {"path": path}
+    # def deal_file(f):
+    #     if random.random() < 0.5:
+    #         time.sleep(0.01)
+    #     return {"f": f}
+    #
+    # audio_paths = range(100)
+    #
+    # manager = Manager()
+    # return_dict = manager.dict()
+    # jobs = []
+    # for threadIndex in range(cpu_count()):
+    #     proc = Process(target=deal,
+    #                    args=(threadIndex, audio_paths, return_dict))
+    #     jobs.append(proc)
+    #     proc.start()
+    # for proc in jobs:
+    #     proc.join()
+    # for v in return_dict.values():
+    #     print(v)
+    # result = []
+    # with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count() - 2) as executor:
+    #     future_to_f = {executor.submit(deal_file, f): f for f in audio_paths}
+    #     for future in concurrent.futures.as_completed(future_to_f):
+    #         f = future_to_f[future]
+    #         try:
+    #             data = future.result()
+    #             result.append(data)
+    #         except Exception as exc:
+    #             print('%r generated an exception: %s' % (f, exc))
+    #         else:
+    #             print('%r file ' % f)
+    # # for r in result:
+    # #     print(r)
+    # print(result)
+    datagen = DataGenerator(save_dir="checkpoints", model_name="deep_bucket_4", max_freq=8000)
+    datagen.load_train_data("./resources/train.json", max_duration=16)
+    st1 = time.time()
+    datagen.sample_normalize(k_samples=-1, noise_percent=0)
+    log.info("time %s", time.time() - st1)
     # datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/103-1240-0000.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/5390-30102-0021.wav", overwrite=True, save_feature_as_csvfile=True)
