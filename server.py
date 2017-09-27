@@ -75,13 +75,14 @@ def load_data(args):
     overwrite_meta_files = args.config.getboolean('train', 'overwrite_meta_files')
     overwrite_bi_graphemes_dictionary = args.config.getboolean('train', 'overwrite_bi_graphemes_dictionary')
     max_duration = args.config.getfloat('data', 'max_duration')
+    max_freq = args.config.getint('data', 'max_freq')
     language = args.config.get('data', 'language')
 
     log = LogUtil().getlogger()
     labelUtil = LabelUtil()
 
     test_json = "resources/d.json"
-    datagen = DataGenerator(save_dir=save_dir, model_name=model_name)
+    datagen = DataGenerator(save_dir=save_dir, model_name=model_name, max_freq=max_freq)
     datagen.load_train_data(test_json, max_duration=max_duration)
     labelutil = load_labelutil(labelUtil, is_bi_graphemes, language="zh")
     args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
