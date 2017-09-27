@@ -426,7 +426,7 @@ def xiaoshuo_2_word():
             continue
         flag = False
         for p in ps:
-            if not p in d:
+            if p not in d or p.isdigit():
                 print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
                 flag = True
                 break
