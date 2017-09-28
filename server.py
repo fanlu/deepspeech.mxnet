@@ -25,7 +25,7 @@ import re
 import array
 import wave
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import create_desc_json
+from create_desc_json import get_duration_wave
 
 from io import BytesIO
 
@@ -58,7 +58,7 @@ class ConfigLogger(object):
 from main import load_labelutil
 
 
-def load_data(args):
+def load_data(args, wav_file):
     mode = args.config.get('common', 'mode')
     if mode not in ['train', 'predict', 'load']:
         raise Exception('mode must be the one of the followings - train,predict,load')
@@ -81,9 +81,12 @@ def load_data(args):
     log = LogUtil().getlogger()
     labelUtil = LabelUtil()
 
-    test_json = "resources/d.json"
+    # test_json = "resources/d.json"
     datagen = DataGenerator(save_dir=save_dir, model_name=model_name, max_freq=max_freq)
-    datagen.load_train_data(test_json, max_duration=max_duration)
+    datagen.train_audio_paths = [wav_file]
+    datagen.train_durations = [get_duration_wave(wav_file)]
+    datagen.train_texts = [""]
+    # datagen.load_train_data(test_json, max_duration=max_duration)
     labelutil = load_labelutil(labelUtil, is_bi_graphemes, language="zh")
     args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
     datagen.get_meta_from_file(
@@ -172,8 +175,8 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             data = form['file'].file.read()
             open(output_file_pre + part1 + ".wav", "wb").write(data)
 
-        create_desc_json.ai_2_word_single(output_file_pre + part1 + ".wav")
-        trans_res = otherNet.getTrans("resources/d.json")
+        # create_desc_json.ai_2_word_single(output_file_pre + part1 + ".wav")
+        trans_res = otherNet.getTrans(output_file_pre + part1 + ".wav")
         content = bytes(trans_res.encode("utf-8"))
         self.send_response(200)
         self.send_header("Content-type", "text/plain; charset=utf-8")
@@ -280,8 +283,8 @@ class Net(object):
         )
         _, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
 
-    def getTrans(self, json_input):
-        self.data_train, self.args = load_data(self.args)
+    def getTrans(self, wav_file):
+        self.data_train, self.args = load_data(self.args, wav_file)
 
         self.model.bind(data_shapes=self.data_train.provide_data,
                         label_shapes=self.data_train.provide_label,
