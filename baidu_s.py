@@ -75,6 +75,9 @@ def gen_wav(txt, cfg, output):
     result = aipSpeech.synthesis(txt, 'zh', 1, cfg)
     if not isinstance(result, dict):
         # audio = AudioSegment(data=result)
+        o_d = output.rsplit("/", 1)[0]
+        if not os.path.exists(o_d):
+            os.makedirs(o_d)
         with open(output, 'wb') as f:
             f.write(result)
     else:
@@ -176,7 +179,7 @@ if __name__ == "__main__":
             'vol': random.randint(4, 7),  # 音量，取值0-15，默认为5中音量
             'per': random.randint(0, 3)  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫(不好)，默认为普通女
         }
-        file, d = line.strip().lsplit(" ", 1)
+        file, d = line.strip().split(" ", 1)
         path = os.path.join(_data_path, "data_aishell/baidu/", file[6:11], "%s_%s_%s_%s_%s.%s" % (
             file, cfg.get("spd"), cfg.get("pit"), cfg.get("vol"),
             cfg.get("per"), "mp3"))
@@ -188,6 +191,7 @@ if __name__ == "__main__":
             ps).decode("utf-8") + "\"}"
         out_file2.write(lin + "\n")
         if (i + 1) % 100 == 0:
+            print(i)
             out_file2.flush()
     out_file2.close()
 
