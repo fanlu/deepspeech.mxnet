@@ -85,7 +85,8 @@ def load_data(args, wav_file):
     datagen = DataGenerator(save_dir=save_dir, model_name=model_name, max_freq=max_freq)
     datagen.train_audio_paths = [wav_file]
     datagen.train_durations = [get_duration_wave(wav_file)]
-    datagen.train_texts = [""]
+    datagen.train_texts = ["1 1"]
+    datagen.count = 1
     # datagen.load_train_data(test_json, max_duration=max_duration)
     labelutil = load_labelutil(labelUtil, is_bi_graphemes, language="zh")
     args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
@@ -244,7 +245,13 @@ class Net(object):
 
         # load model
         self.model_loaded, self.model_num_epoch = load_model(self.args)
-
+        default_bucket_key = 1600
+        self.args.config.set('arch', 'max_t_count', str(default_bucket_key))
+        self.args.config.set('arch', 'max_label_length', str(100))
+        labelUtil = LabelUtil()
+        is_bi_graphemes = self.args.config.getboolean('common', 'is_bi_graphemes')
+        load_labelutil(labelUtil, is_bi_graphemes, language="zh")
+        self.args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
         self.max_t_count = self.args.config.getint('arch', 'max_t_count')
         self.load_optimizer_states = self.args.config.getboolean('load', 'load_optimizer_states')
         self.model_file = self.args.config.get('common', 'model_file')
@@ -255,18 +262,22 @@ class Net(object):
 
         self.model = STTBucketingModule(
             sym_gen=self.model_loaded,
-            default_bucket_key=1600,
+            default_bucket_key=default_bucket_key,
             context=self.contexts
         )
+        width = self.args.config.getint('data', 'width')
+        height = self.args.config.getint('data', 'height')
+        from importlib import import_module
+        prepare_data_template = import_module(self.args.config.get('arch', 'arch_file'))
+        init_states = prepare_data_template.prepare_data(self.args)
         _, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
+        self.model.bind(data_shapes=[('data', (self.batch_size, default_bucket_key, width * height))] + init_states,
+                        label_shapes=[('label', (self.batch_size, self.maxLabelLength))],
+                        for_training=True)
+        self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
 
     def getTrans(self, wav_file):
         self.data_train, self.args = load_data(self.args, wav_file)
-
-        self.model.bind(data_shapes=self.data_train.provide_data,
-                        label_shapes=self.data_train.provide_label,
-                        for_training=True)
-        self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
 
         # self.model.set_params(self.arg_params, self.aux_params)
 
