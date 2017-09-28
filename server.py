@@ -185,43 +185,21 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(content)
 
 
-def load_model(args, contexts, data_train):
+def load_model(args):
     # load model from model_name prefix and epoch of model_num_epoch with gpu contexts of contexts
-    mode = args.config.get('common', 'mode')
-    load_optimizer_states = args.config.getboolean('load', 'load_optimizer_states')
     is_start_from_batch = args.config.getboolean('load', 'is_start_from_batch')
 
     from importlib import import_module
     symbol_template = import_module(args.config.get('arch', 'arch_file'))
-    is_bucketing = args.config.getboolean('arch', 'is_bucketing')
 
-    if mode == 'train':
-        if is_bucketing:
-            bucketing_arch = symbol_template.BucketingArch(args)
-            model_loaded = bucketing_arch.get_sym_gen()
-        else:
-            model_loaded = symbol_template.arch(args)
-        model_num_epoch = None
-    elif mode == 'load' or mode == 'predict':
-        model_file = args.config.get('common', 'model_file')
-        model_name = os.path.splitext(model_file)[0]
-        model_num_epoch = int(model_name[-4:])
-        if is_bucketing:
-            bucketing_arch = symbol_template.BucketingArch(args)
-            model_loaded = bucketing_arch.get_sym_gen()
-        else:
-            model_path = 'checkpoints/' + str(model_name[:-5])
-
-            data_names = [x[0] for x in data_train.provide_data]
-            label_names = [x[0] for x in data_train.provide_label]
-
-            model_loaded = mx.module.Module.load(
-                prefix=model_path, epoch=model_num_epoch, context=contexts,
-                data_names=data_names, label_names=label_names,
-                load_optimizer_states=load_optimizer_states)
-        if is_start_from_batch:
-            import re
-            model_num_epoch = int(re.findall('\d+', model_file)[0])
+    model_file = args.config.get('common', 'model_file')
+    model_name = os.path.splitext(model_file)[0]
+    model_num_epoch = int(model_name[-4:])
+    bucketing_arch = symbol_template.BucketingArch(args)
+    model_loaded = bucketing_arch.get_sym_gen()
+    if is_start_from_batch:
+        import re
+        model_num_epoch = int(re.findall('\d+', model_file)[0])
 
     return model_loaded, model_num_epoch
 
@@ -257,7 +235,6 @@ class Net(object):
         self.num_gpu = len(self.contexts)
         self.batch_size = self.args.config.getint('common', 'batch_size')
         # check the number of gpus is positive divisor of the batch size for data parallel
-        self.data_train, self.args = load_data(self.args)
         self.is_batchnorm = self.args.config.getboolean('arch', 'is_batchnorm')
         self.is_bucketing = self.args.config.getboolean('arch', 'is_bucketing')
 
@@ -266,7 +243,7 @@ class Net(object):
         self.config_logger(self.args.config)
 
         # load model
-        self.model_loaded, self.model_num_epoch = load_model(self.args, self.contexts, self.data_train)
+        self.model_loaded, self.model_num_epoch = load_model(self.args)
 
         self.max_t_count = self.args.config.getint('arch', 'max_t_count')
         self.load_optimizer_states = self.args.config.getboolean('load', 'load_optimizer_states')
