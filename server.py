@@ -1,33 +1,23 @@
+import BaseHTTPServer
+import cgi
 import json
 import os
 import sys
-from collections import namedtuple
+from BaseHTTPServer import HTTPServer
 from datetime import datetime
-from config_util import parse_args, parse_contexts, generate_file_path
-from train import do_training
+
 import mxnet as mx
-from stt_io_iter import STTIter
+import numpy as np
+
+from config_util import parse_args, parse_contexts, generate_file_path
+from create_desc_json import get_duration_wave
 from label_util import LabelUtil
 from log_util import LogUtil
-import numpy as np
-from stt_datagenerator import DataGenerator
-from stt_metric import STTMetric, EvalSTTMetric
-from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
 from stt_bucketing_module import STTBucketingModule
+from stt_datagenerator import DataGenerator
 from stt_io_bucketingiter import BucketSTTIter
-import posixpath
-import BaseHTTPServer
-import urllib
-import cgi
-import shutil
-import mimetypes
-import re
-import array
-import wave
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from create_desc_json import get_duration_wave
-
-from io import BytesIO
+from stt_io_iter import STTIter
+from stt_metric import EvalSTTMetric
 
 # os.environ['MXNET_ENGINE_TYPE'] = "NaiveEngine"
 os.environ['MXNET_ENGINE_TYPE'] = "ThreadedEnginePerDevice"
@@ -272,7 +262,7 @@ class Net(object):
         init_states = prepare_data_template.prepare_data(self.args)
         _, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
         self.model.bind(data_shapes=[('data', (self.batch_size, default_bucket_key, width * height))] + init_states,
-                        label_shapes=[('label', (self.batch_size, self.maxLabelLength))],
+                        label_shapes=[('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
                         for_training=True)
         self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
 
