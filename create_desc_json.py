@@ -22,7 +22,9 @@ import soundfile as sf
 import random
 import pypinyin
 import time
-
+from pydub import AudioSegment
+import concurrent.futures
+from multiprocessing import cpu_count
 from stt_phone_util import generate_zi_label, strQ2B
 from sentence2phoneme import sentence2phoneme, loadmap
 from stt_metric import levenshtein_distance
@@ -440,6 +442,41 @@ def xiaoshuo_2_word():
     out_file.close()
 
 
+def aia_2_word(DIR):
+    scp = [i for i in glob.glob(DIR + "/*/*.scp") if "noise" not in i]
+    dir_name = DIR.rsplit("/", 1)[1]
+    out_file = open(_data_path + 'fanlu/' + dir_name + '.json', 'w')
+    d = set()
+    for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
+        d.add(line.rsplit(",", 1)[0])
+    for j in scp:
+        for m, line in enumerate(open(j).readlines()):
+            file_name, txt = line.strip().split(" ", 1)
+            path = os.path.join("/export/fanlu/", '8k', dir_name, j.replace(".scp", ""), file_name + ".wav")
+            if not os.path.exists(path):
+                print("%s not exist" % path)
+                continue
+            duration = get_duration_wave(path)
+            if duration > 16:
+                continue
+            txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
+            ps = generate_zi_label(deletePunc(txt))
+            if len(ps) == 0:
+                continue
+            flag = False
+            for p in ps:
+                if p not in d or p.isdigit():
+                    print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
+                    flag = True
+                    break
+            if flag:
+                continue
+            line = "{\"key\":\"" + path.replace("fanlu", "aiplatform") + "\", \"duration\": " + str(
+                duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+            out_file.write(line + "\n")
+    out_file.close()
+
+
 def check_biaozhu():
     f = _data_path + "bdp1.txt"
     import json
@@ -472,13 +509,40 @@ def check_biaozhu():
     print("amount: %d, error: %d, all: %d, cer: %.4f" % (amount, count, all, count / float(all)))
 
 
+def auto(input_pcm):
+    b = AudioSegment.from_raw(input_pcm, sample_width=2, frame_rate=16000,
+                              channels=1)
+    dir_path, file_name = input_pcm.rsplit("/", 1)
+    if not os.path.exists(dir_path.replace("fanlu", "fanlu/8k")):
+        os.mkdir(dir_path.replace("fanlu", "fanlu/8k"))
+    b.set_frame_rate(8000).export(dir_path.replace("fanlu", "fanlu/8k/") + input_pcm + ".wav", format="wav")
+    b.set_frame_rate(16000).export(dir_path.replace("fanlu", "fanlu/8k/") + input_pcm + ".wav", format="wav")
+    return "success"
+
+def trans(DIR):
+    audio_paths = glob.glob(DIR + "/*/*.pcm")
+    with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count() - 5) as executor:
+        future_to_f = {executor.submit(auto, f): f for f in audio_paths}
+        for future in concurrent.futures.as_completed(future_to_f):
+            f = future_to_f[future]
+            try:
+                data = future.result()
+                if data != "success":
+                    print("%s error" % data)
+            except Exception as exc:
+                print('%r generated an exception: %s' % (f, exc))
+            else:
+                print('%r file ' % f)
+
+
+
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('data_directory', type=str,
-    #                     help='Path to data directory')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('data_dir', type=str,
+                        help='Path to data directory')
     # parser.add_argument('output_file', type=str,
     #                     help='Path to output file')
-    # args = parser.parse_args()
+    args = parser.parse_args()
     # # aishell(args.data_directory, args.output_file)
     #
     # aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
@@ -488,14 +552,20 @@ if __name__ == '__main__':
     # ai_2_word()
 
     # ai_thchs30_2_word()
-    st = time.time()
-    for i in range(10000):
-        get_duration_sf("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
-    print(time.time()-st)
-    st1 = time.time()
-    for i in range(10000):
-        get_duration_wave("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
-    print(time.time()-st1)
+    # st = time.time()
+    # for i in range(10000):
+    #     get_duration_sf("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
+    # print(time.time()-st)
+    # st1 = time.time()
+    # for i in range(10000):
+    #     get_duration_wave("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
+    # print(time.time()-st1)
+
+    trans(args.data_dir)
+
+    # aia_2_word(args.data_dir)
+
+
     # search_2_word()
 
     # client_2_word()

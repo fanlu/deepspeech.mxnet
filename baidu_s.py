@@ -22,8 +22,8 @@ SECRET_KEY = 'CDyrmram5k8uEpd5eDtqDotl6zaXRQKn'
 # 初始化AipSpeech对象
 aipSpeech = AipSpeech(APP_ID, API_KEY, SECRET_KEY)
 
-_data_path = '/Users/lonica/Downloads/wav/'
-_data_path = "/export/aiplatform/"
+_data_path = '/Users/lonica/Downloads/'
+#_data_path = "/export/aiplatform/"
 
 
 # 读取文件
@@ -92,22 +92,26 @@ def search(chunk, area):
 
 
 def train_2_baidu():
-    out_file2 = codecs.open(_data_path + "/train.json", 'w', encoding="utf-8")
-    for i, line in enumerate(open("./resources/train.json").readlines()[:5]):
-        cfg = {
-            'spd': random.randint(4, 6),  # 语速，取值0-9，默认为5中语速
-            'pit': random.randint(4, 7),  # 音调，取值0-9，默认为5中语调
-            'vol': random.randint(4, 7),  # 音量，取值0-15，默认为5中音量
-            'per': random.randint(0, 3)  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫(不好)，默认为普通女
-        }
-        d = json.loads(line.strip())
-        path = os.path.join(_data_path, "%s_%s_%s_%s_%s.%s" % (
-            d.get("key").rsplit("/", 1)[1][:-4], cfg.get("spd"), cfg.get("pit"), cfg.get("vol"),
+    out_file2 = codecs.open(_data_path + "/wav/S0002.txt", 'w', encoding="utf-8")
+    for i, line in enumerate(open(_data_path + "/resource_aishell/aishell_transcript_v0.8.txt").readlines()):
+        # cfg = {
+        #     'spd': random.randint(4, 6),  # 语速，取值0-9，默认为5中语速
+        #     'pit': random.randint(4, 7),  # 音调，取值0-9，默认为5中语调
+        #     'vol': random.randint(4, 7),  # 音量，取值0-15，默认为5中音量
+        #     'per': random.randint(0, 3)  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫(不好)，默认为普通女
+        # }
+        file1, d = line.strip().split(" ", 1)
+        if file1 >= "BAC009S0003W0121":
+            continue
+        cfg = {'spd': 5, 'pit': 5, 'vol': 5, 'per': 0}
+        # d = json.loads(line.strip())
+        path = os.path.join(_data_path, "wav", file1[6:11], "%s_%s_%s_%s_%s.%s" % (
+            file1, cfg.get("spd"), cfg.get("pit"), cfg.get("vol"),
             cfg.get("per"), "mp3"))
-        gen_wav(d.get("text"), cfg, path)
+        gen_wav(d, cfg, path)
         AudioSegment.from_mp3(path).export(path[:-3] + "wav", format="wav")
-        ps = generate_zi_label(d.get("text"))
-        lin = "{\"key\":\"" + path + "\", \"duration\": " + str(
+        ps = generate_zi_label(d)
+        lin = "{\"key\":\"" + path[:-3] + "wav" + "\", \"duration\": " + str(
             get_duration_wave(path[:-3] + "wav")) + ", \"text\":\"" + " ".join(
             ps).decode("utf-8") + "\"}"
         out_file2.write(lin + "\n")
@@ -171,29 +175,31 @@ if __name__ == "__main__":
     # print("baidu result %d, ori result %d" % (count1, count2))
     # print(editdistance.eval(str1, str2))
 
-    out_file2 = codecs.open(_data_path + "data_aishell/baidu/train.json", 'w', encoding="utf-8")
-    for i, line in enumerate(open(_data_path + "data_aishell/transcript/aishell_transcript_v0.8.txt").readlines()):
-        cfg = {
-            'spd': random.randint(4, 6),  # 语速，取值0-9，默认为5中语速
-            'pit': random.randint(4, 7),  # 音调，取值0-9，默认为5中语调
-            'vol': random.randint(4, 7),  # 音量，取值0-15，默认为5中音量
-            'per': random.randint(0, 3)  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫(不好)，默认为普通女
-        }
-        file, d = line.strip().split(" ", 1)
-        path = os.path.join(_data_path, "data_aishell/baidu/", file[6:11], "%s_%s_%s_%s_%s.%s" % (
-            file, cfg.get("spd"), cfg.get("pit"), cfg.get("vol"),
-            cfg.get("per"), "mp3"))
-        gen_wav(d, cfg, path)
-        AudioSegment.from_mp3(path).export(path[:-3] + "wav", format="wav")
-        ps = generate_zi_label(d)
-        lin = "{\"key\":\"" + path + "\", \"duration\": " + str(
-            get_duration_wave(path[:-3] + "wav")) + ", \"text\":\"" + " ".join(
-            ps).decode("utf-8") + "\"}"
-        out_file2.write(lin + "\n")
-        if (i + 1) % 100 == 0:
-            print(i)
-            out_file2.flush()
-    out_file2.close()
+    # out_file2 = codecs.open(_data_path + "data_aishell/baidu/train.json", 'w', encoding="utf-8")
+    # for i, line in enumerate(open(_data_path + "data_aishell/transcript/aishell_transcript_v0.8.txt").readlines()):
+    #     cfg = {
+    #         'spd': random.randint(4, 6),  # 语速，取值0-9，默认为5中语速
+    #         'pit': random.randint(4, 7),  # 音调，取值0-9，默认为5中语调
+    #         'vol': random.randint(4, 7),  # 音量，取值0-15，默认为5中音量
+    #         'per': random.randint(0, 3)  # 发音人选择, 0为女声，1为男声，3为情感合成-度逍遥，4为情感合成-度丫丫(不好)，默认为普通女
+    #     }
+    #     file, d = line.strip().split(" ", 1)
+    #     path = os.path.join(_data_path, "data_aishell/baidu/", file[6:11], "%s_%s_%s_%s_%s.%s" % (
+    #         file, cfg.get("spd"), cfg.get("pit"), cfg.get("vol"),
+    #         cfg.get("per"), "mp3"))
+    #     gen_wav(d, cfg, path)
+    #     AudioSegment.from_mp3(path).export(path[:-3] + "wav", format="wav")
+    #     ps = generate_zi_label(d)
+    #     lin = "{\"key\":\"" + path + "\", \"duration\": " + str(
+    #         get_duration_wave(path[:-3] + "wav")) + ", \"text\":\"" + " ".join(
+    #         ps).decode("utf-8") + "\"}"
+    #     out_file2.write(lin + "\n")
+    #     if (i + 1) % 100 == 0:
+    #         print(i)
+    #         out_file2.flush()
+    # out_file2.close()
+
+    train_2_baidu()
 
     # 从URL获取文件识别
     # aipSpeech.asr('', 'pcm', 16000, {
