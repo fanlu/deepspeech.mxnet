@@ -399,10 +399,10 @@ if __name__ == "__main__":
     # # for r in result:
     # #     print(r)
     # print(result)
-    datagen = DataGenerator(save_dir="checkpoints", model_name="deep_bucket_4", max_freq=8000)
-    datagen.load_train_data("./resources/train.json", max_duration=16)
+    datagen = DataGenerator(save_dir="checkpoints", model_name="aishell", max_freq=8000)
+    datagen.load_train_data("./resources/aishell_train.json", max_duration=16)
     st1 = time.time()
-    datagen.sample_normalize(k_samples=-1, noise_percent=0)
+    datagen.sample_normalize(k_samples=100000, noise_percent=0)
     log.info("time %s", time.time() - st1)
     # datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/103-1240-0000.wav", overwrite=True, save_feature_as_csvfile=True)
