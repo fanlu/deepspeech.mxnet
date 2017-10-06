@@ -515,11 +515,10 @@ def auto(input_pcm):
                               channels=1)
     dir_path, file_name = input_pcm.rsplit("/", 1)
     if not os.path.exists(dir_path.replace("fanlu", "fanlu/8k")):
-	print("mkdir %s" % dir_path.replace("fanlu", "fanlu/8k"))
+	    print("mkdir %s" % dir_path.replace("fanlu", "fanlu/8k"))
         os.makedirs(dir_path.replace("fanlu", "fanlu/8k"))
     if not os.path.exists(dir_path.replace("fanlu", "fanlu/16k")):
         os.makedirs(dir_path.replace("fanlu", "fanlu/16k"))
-    
     b.set_frame_rate(8000).export(dir_path.replace("fanlu", "fanlu/8k") + "/" + file_name + ".wav", format="wav")
     b.set_frame_rate(16000).export(dir_path.replace("fanlu", "fanlu/16k") + "/" + file_name + ".wav", format="wav")
     return "success"
@@ -550,11 +549,12 @@ def deal_1():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('data_dir', type=str,
+    parser.add_argument('--data_dir', type=str,
                         help='Path to data directory')
-    # parser.add_argument('output_file', type=str,
+    # parser.add_argument('--output_file', type=str,
     #                     help='Path to output file')
     args = parser.parse_args()
+    print(args.data_dir)
     # # aishell(args.data_directory, args.output_file)
     #
     # aishell("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/", "train1.json")
@@ -573,7 +573,9 @@ if __name__ == '__main__':
     #     get_duration_wave("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
     # print(time.time()-st1)
 
-    #trans(args.data_dir)
+    # trans(args.data_dir)
+
+    # aia_2_word(args.data_dir)
 
     #aia_2_word(args.data_dir)
     deal_1()
