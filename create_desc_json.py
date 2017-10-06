@@ -451,8 +451,9 @@ def aia_2_word(DIR):
         d.add(line.rsplit(",", 1)[0])
     for j in scp:
         for m, line in enumerate(open(j).readlines()):
-            file_name, txt = line.strip().split(" ", 1)
-            path = os.path.join("/export/fanlu/", '8k', dir_name, j.replace(".scp", ""), file_name + ".wav")
+	    #print(line)
+            file_name, txt = line.strip().split("\t", 1)
+            path = "/export/fanlu/" + '16k/' + dir_name + "/" + j.rsplit("/", 1)[1].replace(".scp", "") + "/" + file_name + ".wav"
             if not os.path.exists(path):
                 print("%s not exist" % path)
                 continue
@@ -514,9 +515,13 @@ def auto(input_pcm):
                               channels=1)
     dir_path, file_name = input_pcm.rsplit("/", 1)
     if not os.path.exists(dir_path.replace("fanlu", "fanlu/8k")):
-        os.mkdir(dir_path.replace("fanlu", "fanlu/8k"))
-    b.set_frame_rate(8000).export(dir_path.replace("fanlu", "fanlu/8k/") + input_pcm + ".wav", format="wav")
-    b.set_frame_rate(16000).export(dir_path.replace("fanlu", "fanlu/8k/") + input_pcm + ".wav", format="wav")
+	print("mkdir %s" % dir_path.replace("fanlu", "fanlu/8k"))
+        os.makedirs(dir_path.replace("fanlu", "fanlu/8k"))
+    if not os.path.exists(dir_path.replace("fanlu", "fanlu/16k")):
+        os.makedirs(dir_path.replace("fanlu", "fanlu/16k"))
+    
+    b.set_frame_rate(8000).export(dir_path.replace("fanlu", "fanlu/8k") + "/" + file_name + ".wav", format="wav")
+    b.set_frame_rate(16000).export(dir_path.replace("fanlu", "fanlu/16k") + "/" + file_name + ".wav", format="wav")
     return "success"
 
 def trans(DIR):
@@ -531,10 +536,17 @@ def trans(DIR):
                     print("%s error" % data)
             except Exception as exc:
                 print('%r generated an exception: %s' % (f, exc))
-            else:
-                print('%r file ' % f)
 
-
+def deal_1():
+    f = open("/export/aiplatform/fanlu/aishell_thchs30_xs_nf.json").readlines()
+    f2 = open("/export/aiplatform/fanlu/aishell_thchs30_xs_nf2.json", "w")
+    for i, line in enumerate(f):
+        d = json.loads(line.strip())
+        du = d.get("duration", 0)
+        if du < 1:
+            continue
+	f2.write(line)
+    f2.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -561,10 +573,10 @@ if __name__ == '__main__':
     #     get_duration_wave("/Users/lonica/Downloads/wav/7ebec23e-0d20-4e3d-afca-de325f7c2239_003.wav")
     # print(time.time()-st1)
 
-    trans(args.data_dir)
+    #trans(args.data_dir)
 
-    # aia_2_word(args.data_dir)
-
+    #aia_2_word(args.data_dir)
+    deal_1()
 
     # search_2_word()
 
