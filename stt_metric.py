@@ -49,7 +49,7 @@ class STTMetric(mx.metric.EvalMetric):
             log = LogUtil().getlogger()
             labelUtil = LabelUtil()
         self.batch_loss = 0.
-        log.info(self.audio_paths)
+        # log.info(self.audio_paths)
         host_name = socket.gethostname()
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
