@@ -22,7 +22,7 @@ class LabelUtil(Singleton):
 
             self.count = 0
             for i, r in enumerate(data_file):
-                ch, inx = r.strip().rsplit(",", 1)
+                ch, inx = r.rsplit(",", 1)
                 self.byChar[ch] = int(inx)
                 self.byIndex[int(inx)] = ch
                 self.count += 1

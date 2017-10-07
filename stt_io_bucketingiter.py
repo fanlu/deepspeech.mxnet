@@ -176,6 +176,7 @@ class BucketSTTIter(mx.io.DataIter):
         provide_data = [('data', (self.batch_size, self.buckets[i], self.width * self.height))] + self.init_states
 
         return mx.io.DataBatch(data_all, label_all, pad=0,
+                               index=audio_paths,
                                bucket_key=self.buckets[i],
                                provide_data=provide_data,
                                provide_label=self.provide_label)

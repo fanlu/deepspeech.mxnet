@@ -8,12 +8,14 @@ import mxnet as mx
 import config_util
 # from config_util import get_checkpoint_path, parse_contexts
 from stt_metric import STTMetric
-#tensorboard setting
+# tensorboard setting
 from tensorboard import SummaryWriter
 import socket
 import json
 import numpy as np
-#import stt_bucketing_module
+
+
+# import stt_bucketing_module
 # from stt_bucketing_module import STTBucketingModule
 
 
@@ -34,10 +36,12 @@ def get_initializer(args):
         return mx.initializer.Xavier(magnitude=init_scale, factor_type=args.config.get('train', 'factor_type'))
     return init_type(init_scale)
 
+
 class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
     """A simple lr schedule that simply return `dynamic_lr`. We will set `dynamic_lr`
     dynamically based on performance on the validation set.
     """
+
     def __init__(self, learning_rate=0.001):
         super(SimpleLRScheduler, self).__init__()
         self.learning_rate = learning_rate
@@ -58,7 +62,8 @@ def _get_lr_scheduler(args, kv):
     begin_epoch = 0
     if mode == "load":
         model_file = args.config.get('common', 'model_file')
-        begin_epoch = int(model_file.split("-")[1]) if len(model_file) == 16 else int(model_file.split("n_epoch")[1].split("n_batch")[0])
+        begin_epoch = int(model_file.split("-")[1]) if len(model_file) == 16 else int(
+            model_file.split("n_epoch")[1].split("n_batch")[0])
     step_epochs = [int(l) for l in args.config.get('train', 'lr_step_epochs').split(',')]
     for s in step_epochs:
         if begin_epoch >= s:
@@ -78,7 +83,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
     log = LogUtil().getlogger()
     mkpath(os.path.dirname(config_util.get_checkpoint_path(args)))
 
-    #seq_len = args.config.get('arch', 'max_t_count')
+    # seq_len = args.config.get('arch', 'max_t_count')
     batch_size = args.config.getint('common', 'batch_size')
     save_checkpoint_every_n_epoch = args.config.getint('common', 'save_checkpoint_every_n_epoch')
     save_checkpoint_every_n_batch = args.config.getint('common', 'save_checkpoint_every_n_batch')
@@ -87,9 +92,11 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
 
     contexts = config_util.parse_contexts(args)
     num_gpu = len(contexts)
-    eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_validation_metric,is_epoch_end=True)
+    eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_validation_metric,
+                            is_epoch_end=True)
     # tensorboard setting
-    loss_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_train_metric,is_epoch_end=False)
+    loss_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_train_metric,
+                            is_epoch_end=False)
 
     optimizer = args.config.get('optimizer', 'optimizer')
     learning_rate = args.config.getfloat('train', 'learning_rate')
@@ -105,7 +112,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
     show_every = args.config.getint('train', 'show_every')
     optimizer_params_dictionary = json.loads(args.config.get('optimizer', 'optimizer_params_dictionary'))
     kvstore_option = args.config.get('common', 'kvstore_option')
-    n_epoch=begin_epoch
+    n_epoch = begin_epoch
     is_bucketing = args.config.getboolean('arch', 'is_bucketing')
 
     # kv = mx.kv.create(kvstore_option)
@@ -144,8 +151,8 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         module = model
     else:
         module.bind(data_shapes=data_train.provide_data,
-                label_shapes=data_train.provide_label,
-                for_training=True)
+                    label_shapes=data_train.provide_label,
+                    for_training=True)
 
     if begin_epoch == 0 and mode == 'train':
         module.init_params(initializer=get_initializer(args))
@@ -161,6 +168,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         # module.set_params(arg_params, aux_params, allow_missing=True, allow_extra=True)
 
     lr_scheduler = SimpleLRScheduler(learning_rate=learning_rate)
+
     # lr, lr_scheduler = _get_lr_scheduler(args, kv)
 
     def reset_optimizer(force_init=False):
@@ -172,6 +180,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
                               optimizer=optimizer,
                               optimizer_params=optimizer_params,
                               force_init=force_init)
+
     if mode == "train":
         reset_optimizer(force_init=True)
     else:
@@ -179,7 +188,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         data_train.reset()
         data_train.is_first_epoch = True
 
-    #tensorboard setting
+    # tensorboard setting
     tblog_dir = args.config.get('common', 'tensorboard_log_dir')
     summary_writer = SummaryWriter(tblog_dir)
     learning_rate_pre = 0
@@ -219,12 +228,16 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
             module.update()
             # tensorboard setting
             if (nbatch + 1) % show_every == 0:
+                loss_metric.set_audio_paths(data_batch.index)
                 module.update_metric(loss_metric, data_batch.label)
                 # print("loss=========== %.2f" % loss_metric.get_batch_loss())
-            #summary_writer.add_scalar('loss batch', loss_metric.get_batch_loss(), nbatch)
-            if (nbatch+1) % save_checkpoint_every_n_batch == 0:
+            # summary_writer.add_scalar('loss batch', loss_metric.get_batch_loss(), nbatch)
+            if (nbatch + 1) % save_checkpoint_every_n_batch == 0:
                 log.info('Epoch[%d] Batch[%d] SAVE CHECKPOINT', n_epoch, nbatch)
-                save_checkpoint(module, prefix=config_util.get_checkpoint_path(args)+"n_epoch"+str(n_epoch)+"n_batch", epoch=(int((nbatch+1)/save_checkpoint_every_n_batch)-1), save_optimizer_states=save_optimizer_states)
+                save_checkpoint(module,
+                                prefix=config_util.get_checkpoint_path(args) + "n_epoch" + str(n_epoch) + "n_batch",
+                                epoch=(int((nbatch + 1) / save_checkpoint_every_n_batch) - 1),
+                                save_optimizer_states=save_optimizer_states)
         # commented for Libri_sample data set to see only train cer
         log.info(host_name + '---------validation---------')
         data_val.reset()
@@ -232,11 +245,13 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         for nbatch, data_batch in enumerate(data_val):
             # when is_train = False it leads to high cer when batch_norm
             module.forward(data_batch, is_train=True)
+            eval_metric.set_audio_paths(data_batch.index)
             module.update_metric(eval_metric, data_batch.label)
 
         # tensorboard setting
         val_cer, val_n_label, val_l_dist, val_ctc_loss = eval_metric.get_name_value()
-        log.info("Epoch[%d] val cer=%f (%d / %d), ctc_loss=%f", n_epoch, val_cer, int(val_n_label - val_l_dist), val_n_label, val_ctc_loss)
+        log.info("Epoch[%d] val cer=%f (%d / %d), ctc_loss=%f", n_epoch, val_cer, int(val_n_label - val_l_dist),
+                 val_n_label, val_ctc_loss)
         curr_acc = val_cer
         summary_writer.add_scalar('CER validation', val_cer, n_epoch)
         summary_writer.add_scalar('loss validation', val_ctc_loss, n_epoch)
@@ -253,7 +268,8 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         # save checkpoints
         if n_epoch % save_checkpoint_every_n_epoch == 0:
             log.info('Epoch[%d] SAVE CHECKPOINT', n_epoch)
-            save_checkpoint(module, prefix=config_util.get_checkpoint_path(args), epoch=n_epoch, save_optimizer_states=save_optimizer_states)
+            save_checkpoint(module, prefix=config_util.get_checkpoint_path(args), epoch=n_epoch,
+                            save_optimizer_states=save_optimizer_states)
 
         n_epoch += 1
 

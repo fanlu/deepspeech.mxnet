@@ -38,6 +38,10 @@ class STTMetric(mx.metric.EvalMetric):
         self.total_ctc_loss = 0.
         self.batch_loss = 0.
         self.is_logging = is_logging
+        self.audio_paths = []
+
+    def set_audio_paths(self, audio_paths):
+        self.audio_paths = audio_paths
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -45,6 +49,7 @@ class STTMetric(mx.metric.EvalMetric):
             log = LogUtil().getlogger()
             labelUtil = LabelUtil()
         self.batch_loss = 0.
+        log.info(self.audio_paths)
         host_name = socket.gethostname()
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -91,6 +96,7 @@ class STTMetric(mx.metric.EvalMetric):
         self.num_inst = 0
         self.sum_metric = 0.0
         self.total_ctc_loss = 0.0
+        self.audio_paths = []
 
 
 class EvalSTTMetric(STTMetric):
