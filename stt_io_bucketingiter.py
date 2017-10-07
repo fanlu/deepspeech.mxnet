@@ -7,7 +7,7 @@ from log_util import LogUtil
 sys.path.insert(0, "../../python")
 
 import bisect
-import random
+import socket
 import numpy as np
 
 BATCH_SIZE = 1
@@ -148,9 +148,13 @@ class BucketSTTIter(mx.io.DataIter):
 
         audio_paths = []
         texts = []
+        durations = []
         for duration, audio_path, text in self.data[i][j:j + self.batch_size]:
             audio_paths.append(audio_path)
+            durations.append(duration)
             texts.append(text)
+        log = LogUtil().getlogger()
+        log.info("%s, %s, %s" % (socket.gethostname(), audio_paths, durations))
 
         if self.is_first_epoch:
             data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True,

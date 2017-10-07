@@ -224,7 +224,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         log.info("n_epoch %d's lr is %.7f" % (n_epoch, lr_scheduler.learning_rate))
         summary_writer.add_scalar('lr', lr_scheduler.learning_rate, n_epoch)
         for nbatch, data_batch in enumerate(data_train):
-            log.info("%s, %s" % (socket.gethostname(), data_batch.index))
+
             module.forward_backward(data_batch)
             module.update()
             # tensorboard setting
