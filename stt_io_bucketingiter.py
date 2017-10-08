@@ -154,7 +154,7 @@ class BucketSTTIter(mx.io.DataIter):
             durations.append(duration)
             texts.append(text)
         log = LogUtil().getlogger()
-        log.info("%s, %s, %s" % (socket.gethostname(), audio_paths, durations))
+        # log.info("%s, %s, %s" % (socket.gethostname(), audio_paths, durations))
 
         if self.is_first_epoch:
             data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True,
