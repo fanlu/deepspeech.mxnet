@@ -74,7 +74,7 @@ def load_data(args, kv=None):
     if mode not in ['train', 'predict', 'load']:
         raise Exception('mode must be the one of the followings - train,predict,load')
     batch_size = args.config.getint('common', 'batch_size')
-    val_batch_size = args.config.getint('common', 'val_batch_size', batch_size)
+    val_batch_size = args.config.getint('common', 'val_batch_size')
     whcs = WHCS()
     whcs.width = args.config.getint('data', 'width')
     whcs.height = args.config.getint('data', 'height')
