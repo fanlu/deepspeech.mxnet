@@ -74,7 +74,7 @@ def load_data(args, kv=None):
     if mode not in ['train', 'predict', 'load']:
         raise Exception('mode must be the one of the followings - train,predict,load')
     batch_size = args.config.getint('common', 'batch_size')
-
+    val_batch_size = args.config.getint('common', 'val_batch_size', default=batch_size)
     whcs = WHCS()
     whcs.width = args.config.getint('data', 'width')
     whcs.height = args.config.getint('data', 'height')
@@ -204,7 +204,7 @@ def load_data(args, kv=None):
             validation_loaded = BucketSTTIter(partition="validation",
                                               count=datagen.val_count,
                                               datagen=datagen,
-                                              batch_size=batch_size,
+                                              batch_size=val_batch_size,
                                               num_label=max_label_length,
                                               init_states=init_states,
                                               seq_length=max_t_count,
@@ -224,7 +224,7 @@ def load_data(args, kv=None):
             validation_loaded = STTIter(partition="validation",
                                         count=datagen.val_count,
                                         datagen=datagen,
-                                        batch_size=batch_size,
+                                        batch_size=val_batch_size,
                                         num_label=max_label_length,
                                         init_states=init_states,
                                         seq_length=max_t_count,
