@@ -551,6 +551,50 @@ def deal_1():
     f2.close()
 
 
+def is_chinese(uchar):
+    if u'\u4e00' <= uchar <= u'\u9fff':
+        return True
+    else:
+        return False
+
+
+def deal_wave():
+    d = set()
+    for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
+        d.add(line.rsplit(",", 1)[0])
+    out_file = open('/export/fanlu/WAVE.json', 'w')
+    script = glob.glob("/export/fanlu/SCRIPT/*.TXT")
+    for s in script:
+        name = s.rsplit("/", 1)[0][1:-5]
+        wav_path = "/export/file_server/WAVE/SPEAKER" + name + "/"
+        lines = open(s).readlines()
+        for i in range(0, len(lines), 2):
+            wav_name = lines[i].split("\t")[0]
+            txt = filter(is_chinese, lines[i + 1].strip().decode("utf-8"))
+            ps = generate_zi_label(txt)
+            if len(ps) == 0:
+                continue
+            flag = False
+            for p in ps:
+                if p not in d or p.isdigit():
+                    print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
+                    flag = True
+                    break
+            if flag:
+                continue
+            wav = wav_path + "SESSION0/" +  wav_name + ".WAV"
+            if not os.path.exists(wav):
+                print("%s not exist" % wav)
+                continue
+            duration = get_duration_wave(wav)
+            if duration > 16:
+                print("%s longer than 16s" % wav)
+                continue
+            line = "{\"key\":\"" + wav.replace("file_server", "aiplatform") + "\", \"duration\": " + str(
+                duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+            out_file.write(line + "\n")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
@@ -582,7 +626,7 @@ if __name__ == '__main__':
     # aia_2_word(args.data_dir)
 
     # aia_2_word(args.data_dir)
-    deal_1()
+    deal_wave()
 
     # search_2_word()
 
