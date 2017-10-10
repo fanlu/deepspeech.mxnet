@@ -216,8 +216,8 @@ def load_data(args, kv=None):
                                               zh_type=zh_type,
                                               buckets=buckets,
                                               save_feature_as_csvfile=save_feature_as_csvfile,
-                                              num_parts=kv.num_workers,
-                                              part_index=kv.rank,
+                                              # num_parts=kv.num_workers,
+                                              # part_index=kv.rank,
                                               noise_percent=0
                                               )
         else:
