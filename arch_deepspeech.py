@@ -18,7 +18,7 @@ from stt_layer_slice import slice_symbol_to_seq_symobls
 from stt_layer_warpctc import warpctc_layer
 
 
-def prepare_data(args):
+def prepare_data(args, is_val=False):
     """
     set atual shape of data
     """
@@ -27,6 +27,8 @@ def prepare_data(args):
     num_hidden_rnn_list = json.loads(args.config.get("arch", "num_hidden_rnn_list"))
     num_hidden_proj = args.config.getint("arch", "num_hidden_proj")
     batch_size = args.config.getint("common", "batch_size")
+    if is_val:
+        batch_size = args.config.getint("common", "val_batch_size")
 
     if rnn_type == 'lstm':
         init_c = [('l%d_init_c' % l, (batch_size, num_hidden_rnn_list[l]))

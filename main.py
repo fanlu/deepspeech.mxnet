@@ -201,6 +201,7 @@ def load_data(args, kv=None):
 
     if mode == 'train' or mode == 'load':
         if is_bucketing:
+            init_states = prepare_data_template.prepare_data(args, is_val=True)
             validation_loaded = BucketSTTIter(partition="validation",
                                               count=datagen.val_count,
                                               datagen=datagen,

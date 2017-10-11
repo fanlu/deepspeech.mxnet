@@ -85,6 +85,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
 
     # seq_len = args.config.get('arch', 'max_t_count')
     batch_size = args.config.getint('common', 'batch_size')
+    val_batch_size = args.config.getint('common', 'val_batch_size')
     save_checkpoint_every_n_epoch = args.config.getint('common', 'save_checkpoint_every_n_epoch')
     save_checkpoint_every_n_batch = args.config.getint('common', 'save_checkpoint_every_n_batch')
     enable_logging_train_metric = args.config.getboolean('train', 'enable_logging_train_metric')
@@ -92,7 +93,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
 
     contexts = config_util.parse_contexts(args)
     num_gpu = len(contexts)
-    eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_validation_metric,
+    eval_metric = STTMetric(batch_size=val_batch_size, num_gpu=num_gpu, is_logging=enable_logging_validation_metric,
                             is_epoch_end=True)
     # tensorboard setting
     loss_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_train_metric,
