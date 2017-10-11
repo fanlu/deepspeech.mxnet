@@ -130,7 +130,10 @@ def do_training(args, module, data_train, data_val, begin_epoch=0, kv=None):
         model_num_epoch = int(model_name[-4:])
 
         model_path = 'checkpoints/' + str(model_name[:-5])
-        symbol, data_names, label_names = module(1600)
+        prefix = args.config.get('common', 'prefix')
+        if os.path.isabs(prefix):
+            model_path = config_util.get_checkpoint_path(args).rsplit("/", 1)[0] + "/" + str(model_name[:-5])
+        # symbol, data_names, label_names = module(1600)
         model = mx.mod.BucketingModule(
             sym_gen=module,
             default_bucket_key=data_train.default_bucket_key,

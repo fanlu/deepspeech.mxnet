@@ -1,6 +1,10 @@
 import logging
 import logging.handlers
+
+import os
+
 from singleton import Singleton
+
 
 class SingletonType(type):
     def __call__(cls, *args, **kwargs):
@@ -30,10 +34,12 @@ class LogUtil(Singleton):
 
         if self._filename is not None:
             file_max_bytes = 10 * 1024 * 1024
+            if not os.path.isabs(self._filename):
+                self._filename = "./log/" + self._filename
 
-            file_handler = logging.handlers.RotatingFileHandler(filename='./log/' + self._filename,
-                                                               maxBytes=file_max_bytes,
-                                                               backupCount=10)
+            file_handler = logging.handlers.RotatingFileHandler(filename=self._filename,
+                                                                maxBytes=file_max_bytes,
+                                                                backupCount=10)
             file_formatter = logging.Formatter('[%(levelname)8s][%(asctime)s.%(msecs)03d] %(message)s',
                                                datefmt='%Y/%m/%d %H:%M:%S')
             file_handler.setFormatter(file_formatter)

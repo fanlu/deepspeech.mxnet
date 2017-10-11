@@ -84,6 +84,7 @@ def load_data(args, kv=None):
     noise_percent = args.config.getfloat('data', 'noise_percent')
 
     save_dir = 'checkpoints'
+    # prefix = args.config.get('common', 'prefix')
     model_name = args.config.get('common', 'prefix')
     is_bi_graphemes = args.config.getboolean('common', 'is_bi_graphemes')
     zh_type = args.config.get('data', 'zh_type')

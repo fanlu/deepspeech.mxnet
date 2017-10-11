@@ -56,14 +56,16 @@ def get_log_path(args):
     mode = args.config.get('mode', 'method')
     prefix = args.config.get(mode, 'prefix')
     if os.path.isabs(prefix):
-        return prefix
+        prefix, m_name = prefix.rsplit("/", 1)
+        return os.path.abspath(os.path.join(prefix, 'log', m_name, mode))
     return os.path.abspath(os.path.join(os.path.dirname('__file__'), 'log', prefix, mode))
 
 
 def get_checkpoint_path(args):
     prefix = args.config.get('common', 'prefix')
     if os.path.isabs(prefix):
-        return prefix
+        prefix, m_name = prefix.rsplit("/", 1)
+        return os.path.abspath(os.path.join(prefix, 'checkpoints', m_name))
     return os.path.abspath(os.path.join(os.path.dirname('__file__'), 'checkpoints', prefix))
 
 
@@ -80,6 +82,7 @@ def parse_contexts(args):
 
 def generate_file_path(save_dir, model_name, postfix):
     if os.path.isabs(model_name):
-        return os.path.join(model_name, postfix)
+        prefix, m_name = model_name.rsplit("/", 1)
+        return os.path.abspath(os.path.join(prefix, save_dir, m_name + '_' + postfix))
     # if it is not a full path it stores under (its project path)/save_dir/model_name/postfix
     return os.path.abspath(os.path.join(os.path.dirname(__file__), save_dir, model_name + '_' + postfix))
