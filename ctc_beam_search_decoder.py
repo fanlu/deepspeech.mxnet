@@ -258,19 +258,20 @@ def ctc_beam_search_decoder_log(probs_seq,
                         log_probs_nb_cur[l_plus] = log_sum_exp(log_probs_nb_cur[l_plus],
                                                                log_prob_c + log_probs_b_prev[l])
                         log_probs_nb_cur[l] = log_sum_exp(log_probs_nb_cur[l], log_prob_c + log_probs_nb_prev[l])
-                    elif new_char == ' ':
+                    else: #  new_char == ' '
                         if (ext_scoring_func is None) or (len(l) == 1):
                             score = 0.0
                         else:
                             prefix = l[1:]
-                            score = ext_scoring_func(prefix, True)
+                            score = ext_scoring_func(" ".join(prefix), True)
+                            print("%s score: %.6f" % (prefix, score))
                         log_probs_prev = log_sum_exp(log_probs_b_prev[l], log_probs_nb_prev[l])
                         log_probs_nb_cur[l_plus] = log_sum_exp(log_probs_nb_cur[l_plus],
                                                                score + log_prob_c + log_probs_prev)
-                        print("%s score: %.6f, log_probs_prev: %.6f, log_prob_c: %.6f" % (prefix, score, log_probs_prev, log_prob_c))
-                    else:
-                        log_probs_prev = log_sum_exp(log_probs_b_prev[l], log_probs_nb_prev[l])
-                        log_probs_nb_cur[l_plus] = log_sum_exp(log_probs_nb_cur[l_plus], log_prob_c + log_probs_prev)
+                        print("log_probs_prev: %.6f, log_prob_c: %.6f" % (log_probs_prev, log_prob_c))
+                    # else:
+                    #     log_probs_prev = log_sum_exp(log_probs_b_prev[l], log_probs_nb_prev[l])
+                    #     log_probs_nb_cur[l_plus] = log_sum_exp(log_probs_nb_cur[l_plus], log_prob_c + log_probs_prev)
 
                     # add l_plus into prefix_set_next
                     prefix_set_next[l_plus] = log_sum_exp(log_probs_nb_cur[
@@ -291,9 +292,9 @@ def ctc_beam_search_decoder_log(probs_seq,
     for (seq, log_prob) in prefix_set_prev.items():
         if log_prob > FLT64_MIN:
             result = seq[1:]
-            if (ext_scoring_func is not None) and (result[-1] != ' '):
-                score = ext_scoring_func(result, True)
-                print("log_prob: %.6f, score: %.6f" % (log_prob, score))
+            if (ext_scoring_func is not None) and (len(result) > 0 and result[-1] != ' '):
+                score = ext_scoring_func(" ".join(result), True)
+                print("result: %s, log_prob: %.6f, score: %.6f" % (" ".join(result), log_prob, score))
                 log_prob = log_prob + score
             if log_prob > FLT64_MIN:
                 beam_result.append([log_prob, result])
