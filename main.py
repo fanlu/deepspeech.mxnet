@@ -5,6 +5,8 @@ import sys
 from collections import namedtuple
 from datetime import datetime
 
+import kenlm
+
 import config_util
 from config_util import parse_args, parse_contexts, generate_file_path
 from train import do_training
@@ -385,7 +387,8 @@ if __name__ == '__main__':
             model_loaded.bind(for_training=False, data_shapes=data_train.provide_data,
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
-        eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu)
+        km = kenlm.Model(args.config.get('common', 'kenlm'))
+        eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km)
         if is_batchnorm:
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)

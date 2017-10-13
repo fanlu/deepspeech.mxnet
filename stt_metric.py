@@ -28,7 +28,7 @@ def check_label_shapes(labels, preds, shape=0):
 
 
 class STTMetric(mx.metric.EvalMetric):
-    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True):
+    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, model=None):
         super(STTMetric, self).__init__('STTMetric')
 
         self.batch_size = batch_size
@@ -40,6 +40,7 @@ class STTMetric(mx.metric.EvalMetric):
         self.batch_loss = 0.
         self.is_logging = is_logging
         self.audio_paths = []
+        self.model = model
 
     def set_audio_paths(self, audio_paths):
         self.audio_paths = audio_paths
