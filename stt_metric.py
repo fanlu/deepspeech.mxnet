@@ -1,5 +1,6 @@
 import socket
 
+import editdistance
 import mxnet as mx
 import numpy as np
 # import editdistance
@@ -60,18 +61,35 @@ class STTMetric(mx.metric.EvalMetric):
             for i in range(int(int(self.batch_size) / int(self.num_gpu))):
                 l = remove_blank(label[i])
                 p = []
+                probs = []
                 for k in range(int(seq_length)):
                     p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
-                p = pred_best(p)
-                l_distance = levenshtein_distance(l, p)
-                # l_distance = editdistance.eval(l, p)
+                    probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
+                # p = pred_best(p)
+
+                beam_size = 5
+                beam_result = ctc_beam_search_decoder_log(
+                    probs_seq=probs,
+                    beam_size=beam_size,
+                    vocabulary=labelUtil.byIndex,
+                    blank_id=0,
+                    cutoff_prob=0.9,
+                    ext_scoring_func=self.model.score
+                )
+                res = beam_result[0][1]
+
+                # l_distance = levenshtein_distance(l, p)
+                l_distance = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), res)
                 self.total_n_label += len(l)
                 self.total_l_dist += l_distance
                 this_cer = float(l_distance) / float(len(l))
                 if self.is_logging and this_cer > 0.4:
+                    # log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
+                    # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
+                    #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
                     log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-                        host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                        host_name, " ".join(res), this_cer, l_distance, len(l)))
                     # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
                 self.num_inst += 1
                 self.sum_metric += this_cer
