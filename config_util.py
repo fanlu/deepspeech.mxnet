@@ -44,11 +44,11 @@ def parse_args(file_path):
     sys.stderr.write("=" * 80 + "\n")
 
     # set archfile to read template of network
-    if args.archfile is not None:
-        # now read the user supplied config file to overwrite some values
-        args.config.set('arch', 'arch_file', args.archfile)
-    else:
-        args.config.set('arch', 'arch_file', 'arch_deepspeech')
+    # if args.archfile is not None:
+    #     # now read the user supplied config file to overwrite some values
+    #     args.config.set('arch', 'arch_file', args.archfile)
+    # else:
+    #     args.config.set('arch', 'arch_file', 'arch_deepspeech')
     return args
 
 
