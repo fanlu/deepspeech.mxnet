@@ -100,11 +100,11 @@ class STTMetric(mx.metric.EvalMetric):
 
 
 class EvalSTTMetric(STTMetric):
-    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True):
+    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, model=None):
         super(EvalSTTMetric, self).__init__(batch_size=batch_size, num_gpu=num_gpu, is_epoch_end=is_epoch_end,
                                             is_logging=is_logging)
         self.placeholder = ""
-        self.model = kenlm.Model('/export/aiplatform/fanlu/sougou_2.binary')
+        self.model = model
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)

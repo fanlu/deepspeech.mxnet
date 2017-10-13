@@ -6,6 +6,7 @@ import sys
 from BaseHTTPServer import HTTPServer
 from datetime import datetime
 
+import kenlm
 import mxnet as mx
 import numpy as np
 
@@ -262,7 +263,8 @@ class Net(object):
         init_states = prepare_data_template.prepare_data(self.args)
         _, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
         self.model.bind(data_shapes=[('data', (self.batch_size, default_bucket_key, width * height))] + init_states,
-                        label_shapes=[('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
+                        label_shapes=[
+                            ('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
                         for_training=True)
         self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
 
@@ -275,7 +277,7 @@ class Net(object):
 
         model_loaded = self.model
         max_t_count = self.args.config.getint('arch', 'max_t_count')
-        eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True)
+        eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True, model=model)
         for nbatch, data_batch in enumerate(self.data_train):
             model_loaded.forward(data_batch, is_train=False)
             model_loaded.update_metric(eval_metric, data_batch.label)
@@ -287,6 +289,7 @@ class Net(object):
         print("adfe")
 
 
+model = kenlm.Model('/export/fanlu/sougouData.binary')
 otherNet = Net()
 
 if __name__ == '__main__':
