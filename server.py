@@ -148,7 +148,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         filename = form['file'].filename
         print("filename is: " + str(filename))
         output_file_pre = "/export/aiplatform/fanlu/yuyin_test/"
-        part1, part2 = filename.split(".")
+        part1, part2 = filename.rsplit(".", 1)
         if filename.endswith(".speex"):
             data = form['file'].file.read()
             open("./" + filename, "wb").write(data)
@@ -267,6 +267,7 @@ class Net(object):
                             ('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
                         for_training=True)
         self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
+        self.km = kenlm.Model(self.args.config.get('common', 'kenlm'))
 
     def getTrans(self, wav_file):
         self.data_train, self.args = load_data(self.args, wav_file)
@@ -277,19 +278,19 @@ class Net(object):
 
         model_loaded = self.model
         max_t_count = self.args.config.getint('arch', 'max_t_count')
-        eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True, model=model)
+        eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True, model=self.km)
         for nbatch, data_batch in enumerate(self.data_train):
             model_loaded.forward(data_batch, is_train=False)
             model_loaded.update_metric(eval_metric, data_batch.label)
-            print("my res is:")
-            print(eval_metric.placeholder)
+            # print("my res is:")
+            # print(eval_metric.placeholder)
             return eval_metric.placeholder
 
     def printStuff(self):
         print("adfe")
 
 
-model = kenlm.Model('/export/fanlu/sougouData.binary')
+
 otherNet = Net()
 
 if __name__ == '__main__':
