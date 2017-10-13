@@ -4,6 +4,8 @@ import os
 import sys
 from collections import namedtuple
 from datetime import datetime
+
+import config_util
 from config_util import parse_args, parse_contexts, generate_file_path
 from train import do_training
 import mxnet as mx
@@ -363,6 +365,10 @@ if __name__ == '__main__':
             model_num_epoch = int(model_name[-4:])
 
             model_path = 'checkpoints/' + str(model_name[:-5])
+            prefix = args.config.get('common', 'prefix')
+            if os.path.isabs(prefix):
+                model_path = config_util.get_checkpoint_path(args).rsplit("/", 1)[0] + "/" + str(model_name[:-5])
+
             model = STTBucketingModule(
                 sym_gen=model_loaded,
                 default_bucket_key=data_train.default_bucket_key,
