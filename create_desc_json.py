@@ -538,6 +538,23 @@ def trans(DIR):
             except Exception as exc:
                 print('%r generated an exception: %s' % (f, exc))
 
+def wav_16_2_8(wav):
+    b = AudioSegment.from_wav(wav)
+    b.set_frame_rate(8000).export(wav.replace("fanlu", "fanlu/8k"), format="wav")
+    return "success"
+
+def trans_wave(DIR):
+    audio_paths = glob.glob(DIR + "/*/*/*.WAV")
+    with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count() - 10) as executor:
+        future_to_f = {executor.submit(wav_16_2_8, f): f for f in audio_paths}
+        for future in concurrent.futures.as_completed(future_to_f):
+            f = future_to_f[future]
+            try:
+                data = future.result()
+                if data != "success":
+                    print("%s error" % data)
+            except Exception as exc:
+                print('%r generated an exception: %s' % (f, exc))
 
 def deal_1():
     f = open("/export/aiplatform/fanlu/aishell_thchs30_gg_sc.json").readlines()
@@ -623,11 +640,13 @@ if __name__ == '__main__':
     # print(time.time()-st1)
 
     # trans(args.data_dir)
+    trans_wave(args.data_dir)
 
     # aia_2_word(args.data_dir)
 
     # aia_2_word(args.data_dir)
-    deal_wave()
+
+    # deal_wave()
 
     # search_2_word()
 
