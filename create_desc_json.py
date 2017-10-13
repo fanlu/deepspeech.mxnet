@@ -540,12 +540,13 @@ def trans(DIR):
 
 
 def deal_1():
-    f = open("/export/aiplatform/fanlu/aishell_thchs30_xs_nf.json").readlines()
-    f2 = open("/export/aiplatform/fanlu/aishell_thchs30_xs_nf2.json", "w")
+    f = open("/export/aiplatform/fanlu/aishell_thchs30_gg_sc.json").readlines()
+    f2 = open("/export/aiplatform/fanlu/aishell_thchs30_gg_sc2.json", "w")
     for i, line in enumerate(f):
         d = json.loads(line.strip())
         du = d.get("duration", 0)
         if du < 1:
+	    print(line.strip())
             continue
         f2.write(line)
     f2.close()
