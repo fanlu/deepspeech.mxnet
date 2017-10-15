@@ -135,80 +135,80 @@ class EvalSTTMetric(STTMetric):
         shouldPrint = True
         host_name = socket.gethostname()
         res_str = ""
-        label, pred = labels[0], preds[0]
-        label = label.asnumpy()
-        pred = pred.asnumpy()
-        seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
-        # sess = tf.Session()
-        for i in range(int(int(self.batch_size) / int(self.num_gpu))):
-            l = remove_blank(label[0])
-            p = []
-            probs = []
-            for k in range(int(seq_length)):
-                p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
-                probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
-            p = pred_best(p)
-            # print(probs)
-            import time
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+            seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
+            # sess = tf.Session()
+            for i in range(int(int(self.batch_size) / int(self.num_gpu))):
+                l = remove_blank(label[0])
+                p = []
+                probs = []
+                for k in range(int(seq_length)):
+                    p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
+                    probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
+                p = pred_best(p)
+                # print(probs)
+                import time
 
-            st = time.time()
-            beam_size = 5
-            beam_result = ctc_beam_search_decoder_log(
-                probs_seq=probs,
-                beam_size=beam_size,
-                vocabulary=labelUtil.byIndex,
-                blank_id=0,
-                cutoff_prob=0.9,
-                ext_scoring_func=self.model.score
-            )
-            st1 = time.time() - st
-            for index in range(len(beam_result)):
-                res_str += beam_result[index][1] + "\n"
-            print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
+                st = time.time()
+                beam_size = 5
+                beam_result = ctc_beam_search_decoder_log(
+                    probs_seq=probs,
+                    beam_size=beam_size,
+                    vocabulary=labelUtil.byIndex,
+                    blank_id=0,
+                    cutoff_prob=0.9,
+                    ext_scoring_func=self.model.score
+                )
+                st1 = time.time() - st
+                for index in range(len(beam_result)):
+                    res_str += beam_result[index][1] + "\n"
+                print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
 
-            res_str1 = labelUtil.convert_num_to_word(p)
-            print("%s" % res_str1)
+                res_str1 = labelUtil.convert_num_to_word(p)
+                print("%s" % res_str1)
 
-            # max_time_steps = int(seq_length)
-            # input_log_prob_matrix_0 = np.log(probs)  # + 2.0
-            #
-            # # len max_time_steps array of batch_size x depth matrices
-            # inputs = ([
-            #   input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
-            # )
-            #
-            # inputs_t = [ops.convert_to_tensor(x) for x in inputs]
-            # inputs_t = array_ops.stack(inputs_t)
-            #
-            # st = time.time()
-            # # run CTC beam search decoder in tensorflow
-            # decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
-            #                                                            [max_time_steps],
-            #                                                            beam_width=10,
-            #                                                            top_paths=3,
-            #                                                            merge_repeated=False)
-            # tf_decoded, tf_log_probs = sess.run([decoded, log_probabilities])
-            # st1 = time.time() - st
-            # for index in range(3):
-            #   tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
-            #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
-            l_distance = editdistance.eval(l, p)
-            l_distance_beam = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), beam_result[0][1])
-            self.total_n_label += len(l)
-            self.total_l_dist_beam += l_distance_beam
-            self.total_l_dist += l_distance
-            this_cer = float(l_distance) / float(len(l))
-            if self.is_logging:
-                # log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
-                # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-                #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
-                log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
-                log.info("%s pred: %s , cer: %f (distance: %d/ label length: %d)" % (
-                    host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
-                log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
-                    host_name, " ".join(beam_result[0][1]), this_cer, l_distance, len(l)))
-            self.total_ctc_loss += self.batch_loss
-            self.placeholder = res_str1 + "\n" + res_str
+                # max_time_steps = int(seq_length)
+                # input_log_prob_matrix_0 = np.log(probs)  # + 2.0
+                #
+                # # len max_time_steps array of batch_size x depth matrices
+                # inputs = ([
+                #   input_log_prob_matrix_0[t, :][np.newaxis, :] for t in range(max_time_steps)]
+                # )
+                #
+                # inputs_t = [ops.convert_to_tensor(x) for x in inputs]
+                # inputs_t = array_ops.stack(inputs_t)
+                #
+                # st = time.time()
+                # # run CTC beam search decoder in tensorflow
+                # decoded, log_probabilities = tf.nn.ctc_beam_search_decoder(inputs_t,
+                #                                                            [max_time_steps],
+                #                                                            beam_width=10,
+                #                                                            top_paths=3,
+                #                                                            merge_repeated=False)
+                # tf_decoded, tf_log_probs = sess.run([decoded, log_probabilities])
+                # st1 = time.time() - st
+                # for index in range(3):
+                #   tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
+                #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
+                l_distance = editdistance.eval(l, p)
+                l_distance_beam = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), beam_result[0][1])
+                self.total_n_label += len(l)
+                self.total_l_dist_beam += l_distance_beam
+                self.total_l_dist += l_distance
+                this_cer = float(l_distance) / float(len(l))
+                if self.is_logging:
+                    # log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
+                    # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
+                    #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                    log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
+                    log.info("%s pred: %s , cer: %f (distance: %d/ label length: %d)" % (
+                        host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                    log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
+                        host_name, " ".join(beam_result[0][1]), this_cer, l_distance, len(l)))
+                self.total_ctc_loss += self.batch_loss
+                self.placeholder = res_str1 + "\n" + res_str
 
     def get_name_value(self):
         total_cer = float(self.total_l_dist) / (float(self.total_n_label) if self.total_n_label > 0 else 0.001)
