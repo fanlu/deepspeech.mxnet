@@ -141,7 +141,7 @@ class EvalSTTMetric(STTMetric):
             seq_length = len(pred) / int(int(self.batch_size) / int(self.num_gpu))
             # sess = tf.Session()
             for i in range(int(int(self.batch_size) / int(self.num_gpu))):
-                l = remove_blank(label[0])
+                l = remove_blank(label[i])
                 p = []
                 probs = []
                 for k in range(int(seq_length)):
