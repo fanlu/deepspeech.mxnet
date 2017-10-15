@@ -388,7 +388,7 @@ if __name__ == '__main__':
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
         km = kenlm.Model(args.config.get('common', 'kenlm'))
-        eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km)
+        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km)
         if is_batchnorm:
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
@@ -399,9 +399,9 @@ if __name__ == '__main__':
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
-        val_cer, val_n_label, val_l_dist, val_ctc_loss = eval_metric.get_name_value()
-        log.info("val cer=%f (%d / %d), ctc_loss=%f", val_cer, int(val_n_label - val_l_dist),
-                 val_n_label, val_ctc_loss)
+        val_cer, val_cer_beam, val_n_label, val_l_dist, val_l_dist_beam, val_ctc_loss = eval_metric.get_name_value()
+        log.info("val cer=%f (%d / %d), cer_beam=%f (%d/%d), ctc_loss=%f", val_cer, int(val_n_label - val_l_dist),
+                 val_n_label, val_cer_beam, int(val_n_label - val_l_dist_beam), val_n_label, val_ctc_loss)
     else:
         raise Exception(
             'Define mode in the cfg file first. ' +

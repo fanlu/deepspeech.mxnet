@@ -169,7 +169,9 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         # create_desc_json.ai_2_word_single(output_file_pre + part1 + ".wav")
         trans_res = otherNet.getTrans(output_file_pre + part1 + ".wav")
-        content = bytes(trans_res.encode("utf-8"))
+        content = bytes(u"没有检测到语音，请重新录制".encode("utf-8"))
+        if trans_res:
+            content = bytes(trans_res.encode("utf-8"))
         self.send_response(200)
         self.send_header("Content-type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", len(content))

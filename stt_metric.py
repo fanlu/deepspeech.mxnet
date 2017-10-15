@@ -123,6 +123,7 @@ class EvalSTTMetric(STTMetric):
         super(EvalSTTMetric, self).__init__(batch_size=batch_size, num_gpu=num_gpu, is_epoch_end=is_epoch_end,
                                             is_logging=is_logging)
         self.placeholder = ""
+        self.total_l_dist_beam = 0
         self.model = model
 
     def update(self, labels, preds):
@@ -132,6 +133,7 @@ class EvalSTTMetric(STTMetric):
             labelUtil = LabelUtil()
         self.batch_loss = 0.
         shouldPrint = True
+        host_name = socket.gethostname()
         res_str = ""
         label, pred = labels[0], preds[0]
         label = label.asnumpy()
@@ -190,8 +192,37 @@ class EvalSTTMetric(STTMetric):
             # for index in range(3):
             #   tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
             #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
+            l_distance = editdistance.eval(l, p)
+            l_distance_beam = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), beam_result[0][1])
+            self.total_n_label += len(l)
+            self.total_l_dist_beam += l_distance_beam
+            self.total_l_dist += l_distance
+            this_cer = float(l_distance) / float(len(l))
+            if self.is_logging and this_cer > 0.4:
+                # log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
+                # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
+                #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
+                log.info("%s pred: %s , cer: %f (distance: %d/ label length: %d)" % (
+                    host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
+                    host_name, " ".join(beam_result[0][1]), this_cer, l_distance, len(l)))
             self.total_ctc_loss += self.batch_loss
             self.placeholder = res_str1 + "\n" + res_str
+
+    def get_name_value(self):
+        total_cer = float(self.total_l_dist) / (float(self.total_n_label) if self.total_n_label > 0 else 0.001)
+        total_cer_beam = float(self.total_l_dist_beam) / (float(self.total_n_label) if self.total_n_label > 0 else 0.001)
+        return total_cer, total_cer_beam, self.total_n_label, self.total_l_dist, self.total_l_dist_beam, self.total_ctc_loss
+
+    def reset(self):
+        self.total_n_label = 0
+        self.total_l_dist = 0
+        self.total_l_dist_beam = 0
+        self.num_inst = 0
+        self.sum_metric = 0.0
+        self.total_ctc_loss = 0.0
+        self.audio_paths = []
 
 
 def pred_best(p):
