@@ -28,7 +28,7 @@ def check_label_shapes(labels, preds, shape=0):
 
 
 class STTMetric(mx.metric.EvalMetric):
-    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, model=None):
+    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True):
         super(STTMetric, self).__init__('STTMetric')
 
         self.batch_size = batch_size
@@ -40,7 +40,6 @@ class STTMetric(mx.metric.EvalMetric):
         self.batch_loss = 0.
         self.is_logging = is_logging
         self.audio_paths = []
-        self.model = model
 
     def set_audio_paths(self, audio_paths):
         self.audio_paths = audio_paths
@@ -66,31 +65,17 @@ class STTMetric(mx.metric.EvalMetric):
                 for k in range(int(seq_length)):
                     p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
                     probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
-                # p = pred_best(p)
+                p = pred_best(p)
 
-                beam_size = 5
-                beam_result = ctc_beam_search_decoder_log(
-                    probs_seq=probs,
-                    beam_size=beam_size,
-                    vocabulary=labelUtil.byIndex,
-                    blank_id=0,
-                    cutoff_prob=0.9,
-                    ext_scoring_func=self.model.score
-                )
-                res = beam_result[0][1]
-
-                # l_distance = levenshtein_distance(l, p)
-                l_distance = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), res)
+                l_distance = levenshtein_distance(l, p)
+                # l_distance = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), res)
                 self.total_n_label += len(l)
                 self.total_l_dist += l_distance
                 this_cer = float(l_distance) / float(len(l))
                 if self.is_logging and this_cer > 0.4:
-                    # log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
-                    # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-                    #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
                     log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-                        host_name, " ".join(res), this_cer, l_distance, len(l)))
+                        host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     # log.info("ctc_loss: %.2f" % ctc_loss(l, pred, i, int(seq_length), int(self.batch_size), int(self.num_gpu)))
                 self.num_inst += 1
                 self.sum_metric += this_cer
@@ -206,7 +191,7 @@ class EvalSTTMetric(STTMetric):
                     log.info("%s pred: %s , cer: %f (distance: %d/ label length: %d)" % (
                         host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
-                        host_name, " ".join(beam_result[0][1]), this_cer, l_distance, len(l)))
+                        host_name, " ".join(beam_result[0][1]), float(l_distance_beam) / len(l), l_distance, len(l)))
                 self.total_ctc_loss += self.batch_loss
                 self.placeholder = res_str1 + "\n" + res_str
 
