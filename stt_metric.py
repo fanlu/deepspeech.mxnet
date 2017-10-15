@@ -198,7 +198,7 @@ class EvalSTTMetric(STTMetric):
             self.total_l_dist_beam += l_distance_beam
             self.total_l_dist += l_distance
             this_cer = float(l_distance) / float(len(l))
-            if self.is_logging and this_cer > 0.4:
+            if self.is_logging:
                 # log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
                 # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
                 #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
