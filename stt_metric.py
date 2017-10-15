@@ -143,7 +143,7 @@ class EvalSTTMetric(STTMetric):
                     beam_size=beam_size,
                     vocabulary=labelUtil.byIndex,
                     blank_id=0,
-                    cutoff_prob=0.9,
+                    cutoff_prob=0.99,
                     ext_scoring_func=self.model.score
                 )
                 st1 = time.time() - st
@@ -188,10 +188,10 @@ class EvalSTTMetric(STTMetric):
                     # log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
                     #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
-                    log.info("%s pred: %s , cer: %f (distance: %d/ label length: %d)" % (
+                    log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
                         host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
-                        host_name, " ".join(beam_result[0][1]), float(l_distance_beam) / len(l), l_distance, len(l)))
+                        host_name, " ".join(beam_result[0][1]), float(l_distance_beam) / len(l), l_distance_beam, len(l)))
                 self.total_ctc_loss += self.batch_loss
                 self.placeholder = res_str1 + "\n" + res_str
 
