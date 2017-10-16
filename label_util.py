@@ -16,6 +16,7 @@ class LabelUtil(Singleton):
     def load_unicode_set(self, unicodeFilePath):
         self.byChar = {}
         self.byIndex = {}
+        self.byList = []
         self.unicodeFilePath = unicodeFilePath
 
         with open(unicodeFilePath, 'rt', encoding='UTF-8') as data_file:
@@ -25,6 +26,7 @@ class LabelUtil(Singleton):
                 ch, inx = r.rsplit(",", 1)
                 self.byChar[ch] = int(inx)
                 self.byIndex[int(inx)] = ch
+                self.byList.append(ch)
                 self.count += 1
 
 

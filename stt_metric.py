@@ -138,30 +138,30 @@ class EvalSTTMetric(STTMetric):
                 beam_size = 5
                 import time
 
-                st2 = time.time()
-                # print(probs)
-                from swig_wrapper import Scorer
-                from swig_wrapper import ctc_beam_search_decoder
-                _ext_scorer = Scorer(0.26, 0.1, self.model.path, labelUtil.byIndex)
-                lm_char_based = _ext_scorer.is_character_based()
-                lm_max_order = _ext_scorer.get_max_order()
-                lm_dict_size = _ext_scorer.get_dict_size()
-                log.info("language model: "
-                         "is_character_based = %d," % lm_char_based +
-                         " max_order = %d," % lm_max_order +
-                         " dict_size = %d" % lm_dict_size)
-
-                beam_search_results = ctc_beam_search_decoder(
-                    probs_split=probs,
-                    vocabulary=labelUtil.byIndex,
-                    beam_size=beam_size,
-                    blank_id=0,
-                    ext_scoring_func=_ext_scorer,
-                    cutoff_prob=0.99,
-                    cutoff_top_n=40)
-
-                results = [result[0][1] for result in beam_search_results]
-                print("%.2f, %s" % (time.time() - st2, "\n".join(results)))
+                # st2 = time.time()
+                # # print(probs)
+                # from swig_wrapper import Scorer
+                # from swig_wrapper import ctc_beam_search_decoder
+                # _ext_scorer = Scorer(0.26, 0.1, self.model.path, labelUtil.byList)
+                # lm_char_based = _ext_scorer.is_character_based()
+                # lm_max_order = _ext_scorer.get_max_order()
+                # lm_dict_size = _ext_scorer.get_dict_size()
+                # log.info("language model: "
+                #          "is_character_based = %d," % lm_char_based +
+                #          " max_order = %d," % lm_max_order +
+                #          " dict_size = %d" % lm_dict_size)
+                #
+                # beam_search_results = ctc_beam_search_decoder(
+                #     probs_split=probs,
+                #     vocabulary=labelUtil.byList,
+                #     beam_size=beam_size,
+                #     blank_id=0,
+                #     ext_scoring_func=_ext_scorer,
+                #     cutoff_prob=0.99,
+                #     cutoff_top_n=40)
+                #
+                # results = [result[0][1] for result in beam_search_results]
+                # print("%.2f, %s" % (time.time() - st2, "\n".join(results)))
 
                 st = time.time()
 
