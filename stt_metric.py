@@ -154,7 +154,7 @@ class EvalSTTMetric(STTMetric):
                 )
                 results = [result[1] for result in beam_search_results]
                 log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
-
+                res_str = "\n".join(results)
                 # st = time.time()
                 #
                 # beam_result = ctc_beam_search_decoder_log(
