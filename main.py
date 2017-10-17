@@ -2,36 +2,37 @@
 import json
 import os
 import sys
-from collections import namedtuple
 from datetime import datetime
 
-import kenlm
+import mxnet as mx
+import numpy as np
 
 import config_util
 from config_util import parse_args, parse_contexts, generate_file_path
-from train import do_training
-import mxnet as mx
-from stt_io_iter import STTIter
-from label_util import LabelUtil, labelUtil
+from label_util import LabelUtil
 from log_util import LogUtil
-import numpy as np
-from stt_datagenerator import DataGenerator
-from stt_metric import STTMetric, EvalSTTMetric
 from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
-from stt_phone_util import generate_phone_dictionary, generate_word_dictionary, generate_py_dictionary
 from stt_bucketing_module import STTBucketingModule
+from stt_datagenerator import DataGenerator
 from stt_io_bucketingiter import BucketSTTIter
+from stt_io_iter import STTIter
+from stt_metric import EvalSTTMetric
+from stt_phone_util import generate_phone_dictionary, generate_word_dictionary, generate_py_dictionary
+from train import do_training
+
 sys.path.insert(0, "../../python")
 
 # os.environ['MXNET_ENGINE_TYPE'] = "NaiveEngine"
 os.environ['MXNET_ENGINE_TYPE'] = "ThreadedEnginePerDevice"
 os.environ['MXNET_ENABLE_GPU_P2P'] = "0"
 
+
 class WHCS:
     width = 0
     height = 0
     channel = 0
     stride = 0
+
 
 class ConfigLogger(object):
     def __init__(self, log):
@@ -45,6 +46,7 @@ class ConfigLogger(object):
         # stripping the data makes the output nicer and avoids empty lines
         line = data.strip()
         self.__log.info(line)
+
 
 def load_labelutil(labelUtil, is_bi_graphemes, language="en", zh_type="zi"):
     if language == "en":
@@ -70,7 +72,6 @@ def load_labelutil(labelUtil, is_bi_graphemes, language="en", zh_type="zi"):
             labelUtil.load_unicode_set("resources/unicodemap_zi.csv")
     else:
         raise Exception("Error: Language Type: %s" % language)
-
 
 
 def load_data(args, kv=None):
@@ -107,9 +108,10 @@ def load_data(args, kv=None):
         datagen.load_train_data(data_json, max_duration=max_duration)
         datagen.load_validation_data(val_json, max_duration=max_duration)
         if is_bi_graphemes and language == "en":
-            if not os.path.isfile("resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
+            if not os.path.isfile(
+                "resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
                 load_labelutil(labelUtil=labelUtil, is_bi_graphemes=False, language=language)
-                generate_bi_graphemes_dictionary(datagen.train_texts+datagen.val_texts)
+                generate_bi_graphemes_dictionary(datagen.train_texts + datagen.val_texts)
         if language == "zh" and zh_type == "phone":
             if not os.path.isfile("resources/unicodemap_phone.csv") or overwrite_bi_graphemes_dictionary:
                 generate_phone_dictionary()
@@ -156,11 +158,13 @@ def load_data(args, kv=None):
     if mode == "train" or mode == "load":
         max_t_count = datagen.get_max_seq_length(partition="train")
         max_label_length = \
-            datagen.get_max_label_length(partition="train", is_bi_graphemes=is_bi_graphemes, language=language, zh_type=zh_type)
+            datagen.get_max_label_length(partition="train", is_bi_graphemes=is_bi_graphemes, language=language,
+                                         zh_type=zh_type)
     elif mode == "predict":
         max_t_count = datagen.get_max_seq_length(partition="test")
         max_label_length = \
-            datagen.get_max_label_length(partition="test", is_bi_graphemes=is_bi_graphemes, language=language, zh_type=zh_type)
+            datagen.get_max_label_length(partition="test", is_bi_graphemes=is_bi_graphemes, language=language,
+                                         zh_type=zh_type)
 
     args.config.set('arch', 'max_t_count', str(max_t_count))
     args.config.set('arch', 'max_label_length', str(max_label_length))
@@ -345,7 +349,7 @@ if __name__ == '__main__':
                 sym_gen=model_loaded,
                 default_bucket_key=data_train.default_bucket_key,
                 context=contexts
-                )
+            )
         else:
             data_names = [x[0] for x in data_train.provide_data]
             label_names = [x[0] for x in data_train.provide_label]
@@ -375,7 +379,7 @@ if __name__ == '__main__':
                 sym_gen=model_loaded,
                 default_bucket_key=data_train.default_bucket_key,
                 context=contexts
-                )
+            )
 
             model.bind(data_shapes=data_train.provide_data,
                        label_shapes=data_train.provide_label,
@@ -387,13 +391,14 @@ if __name__ == '__main__':
             model_loaded.bind(for_training=False, data_shapes=data_train.provide_data,
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
-        km = kenlm.Model(args.config.get('common', 'kenlm'))
+        # import kenlm
+        # km = kenlm.Model(args.config.get('common', 'kenlm'))
         from swig_wrapper import Scorer
 
         labelUtil = LabelUtil()
-        labelUtil.load_unicode_set()
-        vacab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
-        _ext_scorer = Scorer(0.26, 0.1, args.config.get('common', 'kenlm'), vacab_list)
+        vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+        log.info("vacab_list len is %d" % len(vocab_list))
+        _ext_scorer = Scorer(0.26, 0.1, args.config.get('common', 'kenlm'), vocab_list)
         lm_char_based = _ext_scorer.is_character_based()
         lm_max_order = _ext_scorer.get_max_order()
         lm_dict_size = _ext_scorer.get_dict_size()
@@ -401,22 +406,21 @@ if __name__ == '__main__':
                  "is_character_based = %d," % lm_char_based +
                  " max_order = %d," % lm_max_order +
                  " dict_size = %d" % lm_dict_size)
-        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km, scorer=_ext_scorer)
+        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=None, scorer=_ext_scorer)
         if is_batchnorm:
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
         else:
-            #model_loaded.score(eval_data=data_train, num_batch=None,
+            # model_loaded.score(eval_data=data_train, num_batch=None,
             #                   eval_metric=eval_metric, reset=True)
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
-        val_cer, val_cer_beam, val_cer_beam_cpp, val_n_label, val_l_dist, val_l_dist_beam, val_l_dist_beam_cpp, val_ctc_loss = eval_metric.get_name_value()
-        log.info("val cer=%f (%d / %d), cer_beam=%f (%d/%d), cer_beam_cpp=%f (%d/%d) ctc_loss=%f",
+        val_cer, val_cer_beam, val_n_label, val_l_dist, val_l_dist_beam, val_ctc_loss = eval_metric.get_name_value()
+        log.info("val cer=%f (%d / %d), cer_beam=%f (%d/%d) ctc_loss=%f",
                  val_cer, int(val_n_label - val_l_dist), val_n_label,
                  val_cer_beam, int(val_n_label - val_l_dist_beam), val_n_label,
-                 val_cer_beam_cpp, int(val_n_label - val_l_dist_beam_cpp), val_n_label,
                  val_ctc_loss)
     else:
         raise Exception(
