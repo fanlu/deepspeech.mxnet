@@ -12,7 +12,7 @@ from config_util import parse_args, parse_contexts, generate_file_path
 from train import do_training
 import mxnet as mx
 from stt_io_iter import STTIter
-from label_util import LabelUtil
+from label_util import LabelUtil, labelUtil
 from log_util import LogUtil
 import numpy as np
 from stt_datagenerator import DataGenerator
@@ -388,7 +388,20 @@ if __name__ == '__main__':
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
         km = kenlm.Model(args.config.get('common', 'kenlm'))
-        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km)
+        from swig_wrapper import Scorer
+
+        labelUtil = LabelUtil()
+        labelUtil.load_unicode_set()
+        vacab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+        _ext_scorer = Scorer(0.26, 0.1, args.config.get('common', 'kenlm'), vacab_list)
+        lm_char_based = _ext_scorer.is_character_based()
+        lm_max_order = _ext_scorer.get_max_order()
+        lm_dict_size = _ext_scorer.get_dict_size()
+        log.info("language model: "
+                 "is_character_based = %d," % lm_char_based +
+                 " max_order = %d," % lm_max_order +
+                 " dict_size = %d" % lm_dict_size)
+        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km, scorer=_ext_scorer)
         if is_batchnorm:
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
@@ -399,9 +412,12 @@ if __name__ == '__main__':
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
-        val_cer, val_cer_beam, val_n_label, val_l_dist, val_l_dist_beam, val_ctc_loss = eval_metric.get_name_value()
-        log.info("val cer=%f (%d / %d), cer_beam=%f (%d/%d), ctc_loss=%f", val_cer, int(val_n_label - val_l_dist),
-                 val_n_label, val_cer_beam, int(val_n_label - val_l_dist_beam), val_n_label, val_ctc_loss)
+        val_cer, val_cer_beam, val_cer_beam_cpp, val_n_label, val_l_dist, val_l_dist_beam, val_l_dist_beam_cpp, val_ctc_loss = eval_metric.get_name_value()
+        log.info("val cer=%f (%d / %d), cer_beam=%f (%d/%d), cer_beam_cpp=%f (%d/%d) ctc_loss=%f",
+                 val_cer, int(val_n_label - val_l_dist), val_n_label,
+                 val_cer_beam, int(val_n_label - val_l_dist_beam), val_n_label,
+                 val_cer_beam_cpp, int(val_n_label - val_l_dist_beam_cpp), val_n_label,
+                 val_ctc_loss)
     else:
         raise Exception(
             'Define mode in the cfg file first. ' +

@@ -105,12 +105,14 @@ class STTMetric(mx.metric.EvalMetric):
 
 
 class EvalSTTMetric(STTMetric):
-    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, model=None):
+    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, model=None, scorer=None):
         super(EvalSTTMetric, self).__init__(batch_size=batch_size, num_gpu=num_gpu, is_epoch_end=is_epoch_end,
                                             is_logging=is_logging)
         self.placeholder = ""
         self.total_l_dist_beam = 0
+        self.total_l_dist_beam_cpp = 0
         self.model = model
+        self.scorer = scorer
 
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
@@ -137,31 +139,21 @@ class EvalSTTMetric(STTMetric):
 
                 beam_size = 5
                 import time
+                from swig_wrapper import ctc_beam_search_decoder
 
-                # st2 = time.time()
-                # # print(probs)
-                # from swig_wrapper import Scorer
-                # from swig_wrapper import ctc_beam_search_decoder
-                # _ext_scorer = Scorer(0.26, 0.1, self.model.path, labelUtil.byList)
-                # lm_char_based = _ext_scorer.is_character_based()
-                # lm_max_order = _ext_scorer.get_max_order()
-                # lm_dict_size = _ext_scorer.get_dict_size()
-                # log.info("language model: "
-                #          "is_character_based = %d," % lm_char_based +
-                #          " max_order = %d," % lm_max_order +
-                #          " dict_size = %d" % lm_dict_size)
-                #
-                # beam_search_results = ctc_beam_search_decoder(
-                #     probs_split=probs,
-                #     vocabulary=labelUtil.byList,
-                #     beam_size=beam_size,
-                #     blank_id=0,
-                #     ext_scoring_func=_ext_scorer,
-                #     cutoff_prob=0.99,
-                #     cutoff_top_n=40)
-                #
-                # results = [result[0][1] for result in beam_search_results]
-                # print("%.2f, %s" % (time.time() - st2, "\n".join(results)))
+                st2 = time.time()
+                vacab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+                beam_search_results = ctc_beam_search_decoder(
+                    probs_seq=np.array(probs),
+                    vocabulary=vacab_list,
+                    beam_size=beam_size,
+                    blank_id=0,
+                    ext_scoring_func=self.scorer,
+                    cutoff_prob=0.99,
+                    cutoff_top_n=40
+                )
+                results = [result[1] for result in beam_search_results]
+                log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
 
                 st = time.time()
 
@@ -176,10 +168,10 @@ class EvalSTTMetric(STTMetric):
                 st1 = time.time() - st
                 for index in range(len(beam_result)):
                     res_str += beam_result[index][1] + "\n"
-                print("%.2f, %s, %.2f" % (st1, res_str, beam_result[0][0]))
+                log.info("decode by py cost %.2fs:\n%s" % (st1, res_str))
 
                 res_str1 = labelUtil.convert_num_to_word(p)
-                print("%s" % res_str1)
+                log.info("decode by pred_best: %s" % res_str1)
 
                 # max_time_steps = int(seq_length)
                 # input_log_prob_matrix_0 = np.log(probs)  # + 2.0
@@ -206,8 +198,10 @@ class EvalSTTMetric(STTMetric):
                 #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
                 l_distance = editdistance.eval(l, p)
                 l_distance_beam = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), beam_result[0][1])
+                l_distance_beam_cpp = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), results[0])
                 self.total_n_label += len(l)
                 self.total_l_dist_beam += l_distance_beam
+                self.total_l_dist_beam_cpp += l_distance_beam_cpp
                 self.total_l_dist += l_distance
                 this_cer = float(l_distance) / float(len(l))
                 if self.is_logging:
@@ -220,19 +214,26 @@ class EvalSTTMetric(STTMetric):
                     log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
                         host_name, " ".join(beam_result[0][1]), float(l_distance_beam) / len(l), l_distance_beam,
                         len(l)))
+                    log.info("%s predc: %s , cer: %f (distance: %d/ label length: %d)" % (
+                        host_name, " ".join(results[0]), float(l_distance_beam_cpp) / len(l), l_distance_beam_cpp,
+                        len(l)))
                 self.total_ctc_loss += self.batch_loss
                 self.placeholder = res_str1 + "\n" + res_str
 
     def get_name_value(self):
         total_cer = float(self.total_l_dist) / (float(self.total_n_label) if self.total_n_label > 0 else 0.001)
         total_cer_beam = float(self.total_l_dist_beam) / (
-        float(self.total_n_label) if self.total_n_label > 0 else 0.001)
-        return total_cer, total_cer_beam, self.total_n_label, self.total_l_dist, self.total_l_dist_beam, self.total_ctc_loss
+            float(self.total_n_label) if self.total_n_label > 0 else 0.001)
+        total_cer_beam_cpp = float(self.total_l_dist_beam_cpp) / (
+            float(self.total_n_label) if self.total_n_label > 0 else 0.001)
+        return total_cer, total_cer_beam, total_cer_beam_cpp, self.total_n_label, self.total_l_dist, \
+               self.total_l_dist_beam, self.total_l_dist_beam_cpp, self.total_ctc_loss
 
     def reset(self):
         self.total_n_label = 0
         self.total_l_dist = 0
         self.total_l_dist_beam = 0
+        self.total_l_dist_beam_cpp = 0
         self.num_inst = 0
         self.sum_metric = 0.0
         self.total_ctc_loss = 0.0
