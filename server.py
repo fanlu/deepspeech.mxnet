@@ -269,22 +269,26 @@ class Net(object):
                             ('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
                         for_training=True)
         self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
+        try:
+            from swig_wrapper import Scorer
 
-        from swig_wrapper import Scorer
-
-        vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
-        self.log.info("vacab_list len is %d" % len(vocab_list))
-        _ext_scorer = Scorer(0.26, 0.1, self.args.config.get('common', 'kenlm'), vocab_list)
-        lm_char_based = _ext_scorer.is_character_based()
-        lm_max_order = _ext_scorer.get_max_order()
-        lm_dict_size = _ext_scorer.get_dict_size()
-        self.log.info("language model: "
-                      "is_character_based = %d," % lm_char_based +
-                      " max_order = %d," % lm_max_order +
-                      " dict_size = %d" % lm_dict_size)
-        self.scorer = _ext_scorer
-        # import kenlm
-        # self.km = kenlm.Model(self.args.config.get('common', 'kenlm'))
+            vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+            self.log.info("vacab_list len is %d" % len(vocab_list))
+            _ext_scorer = Scorer(0.26, 0.1, self.args.config.get('common', 'kenlm'), vocab_list)
+            lm_char_based = _ext_scorer.is_character_based()
+            lm_max_order = _ext_scorer.get_max_order()
+            lm_dict_size = _ext_scorer.get_dict_size()
+            self.log.info("language model: "
+                          "is_character_based = %d," % lm_char_based +
+                          " max_order = %d," % lm_max_order +
+                          " dict_size = %d" % lm_dict_size)
+            self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
+                                             scorer=_ext_scorer)
+        except ImportError:
+            import kenlm
+            km = kenlm.Model(self.args.config.get('common', 'kenlm'))
+            self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
+                                             scorer=km.score)
 
     def getTrans(self, wav_file):
         self.data_train, self.args = load_data(self.args, wav_file)
@@ -295,18 +299,17 @@ class Net(object):
 
         model_loaded = self.model
         max_t_count = self.args.config.getint('arch', 'max_t_count')
-        eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True, model=None,
-                                    scorer=self.scorer)
+
         for nbatch, data_batch in enumerate(self.data_train):
             st = time.time()
             model_loaded.forward(data_batch, is_train=False)
             self.log.info("forward cost %.2f" % (time.time() - st))
             st = time.time()
-            model_loaded.update_metric(eval_metric, data_batch.label)
+            model_loaded.update_metric(self.eval_metric, data_batch.label)
             self.log.info("upate metric cost %.2f" % (time.time() - st))
             # print("my res is:")
             # print(eval_metric.placeholder)
-            return eval_metric.placeholder
+            return self.eval_metric.placeholder
 
 
 otherNet = Net()

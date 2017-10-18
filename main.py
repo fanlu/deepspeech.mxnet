@@ -406,17 +406,20 @@ if __name__ == '__main__':
                      "is_character_based = %d," % lm_char_based +
                      " max_order = %d," % lm_max_order +
                      " dict_size = %d" % lm_dict_size)
-            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=None, scorer=_ext_scorer)
-        except:
+            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, scorer=_ext_scorer)
+        except ImportError:
             import kenlm
+
             km = kenlm.Model(args.config.get('common', 'kenlm'))
-            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km, scorer=None)
+            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, scorer=km.score)
         if is_batchnorm:
             st = time.time()
             for nbatch, data_batch in enumerate(data_train):
+                st1 = time.time()
                 model_loaded.forward(data_batch, is_train=False)
+                log.info("forward spent is %.2fs" % (time.time() - st))
                 model_loaded.update_metric(eval_metric, data_batch.label)
-            log.info("time spent is %.2f" % (time.time() - st))
+            log.info("time spent is %.2fs" % (time.time() - st))
         else:
             # model_loaded.score(eval_data=data_train, num_batch=None,
             #                   eval_metric=eval_metric, reset=True)

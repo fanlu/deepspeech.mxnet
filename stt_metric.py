@@ -105,13 +105,12 @@ class STTMetric(mx.metric.EvalMetric):
 
 
 class EvalSTTMetric(STTMetric):
-    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, model=None, scorer=None):
+    def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True, scorer=None):
         super(EvalSTTMetric, self).__init__(batch_size=batch_size, num_gpu=num_gpu, is_epoch_end=is_epoch_end,
                                             is_logging=is_logging)
         self.placeholder = ""
         self.total_l_dist_beam = 0
         self.total_l_dist_beam_cpp = 0
-        self.model = model
         self.scorer = scorer
 
     def update(self, labels, preds):
@@ -156,7 +155,7 @@ class EvalSTTMetric(STTMetric):
                     results = [result[1] for result in beam_search_results]
                     log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
                     res_str = "\n".join(results)
-                except:
+                except ImportError:
                     st = time.time()
 
                     beam_result = ctc_beam_search_decoder_log(
@@ -165,7 +164,7 @@ class EvalSTTMetric(STTMetric):
                         vocabulary=labelUtil.byIndex,
                         blank_id=0,
                         cutoff_prob=0.99,
-                        ext_scoring_func=self.model.score
+                        ext_scoring_func=self.scorer
                     )
                     st1 = time.time() - st
                     results = [result[1] for result in beam_result]
