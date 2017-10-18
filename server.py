@@ -147,7 +147,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                      })
         filename = form['file'].filename
         print("filename is: " + str(filename))
-        output_file_pre = "/export/aiplatform/fanlu/yuyin_test/"
+        output_file_pre = "/Users/lonica/Downloads/wav/"
         part1, part2 = filename.rsplit(".", 1)
         if filename.endswith(".speex"):
             data = form['file'].file.read()
@@ -163,9 +163,11 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             command = "ffmpeg -y -i " + output_file_pre + part1 + ".amr -acodec pcm_s16le -ar 16000 -ac 1 -b 256 " + output_file_pre + part1 + ".wav"
             os.system(command)
 
-        elif filename.endswith(".wav"):
-            data = form['file'].file.read()
-            open(output_file_pre + part1 + ".wav", "wb").write(data)
+        elif filename.lower().endswith(".wav"):
+            data = form['file'].file
+            # import soundfile as sf
+            # audio, sr1 = sf.read(data, dtype='float32')
+            open(output_file_pre + part1 + ".wav", "wb").write(data.read())
 
         # create_desc_json.ai_2_word_single(output_file_pre + part1 + ".wav")
         trans_res = otherNet.getTrans(output_file_pre + part1 + ".wav")
@@ -189,13 +191,13 @@ def load_model(args):
     model_file = args.config.get('common', 'model_file')
     model_name = os.path.splitext(model_file)[0]
     model_num_epoch = int(model_name[-4:])
+
+    model_path = 'checkpoints/' + str(model_name[:-5])
+
     bucketing_arch = symbol_template.BucketingArch(args)
     model_loaded = bucketing_arch.get_sym_gen()
-    if is_start_from_batch:
-        import re
-        model_num_epoch = int(re.findall('\d+', model_file)[0])
 
-    return model_loaded, model_num_epoch
+    return model_loaded, model_num_epoch, model_path
 
 
 class Net(object):
@@ -236,8 +238,7 @@ class Net(object):
         self.config_logger = ConfigLogger(self.log)
         self.config_logger(self.args.config)
 
-        # load model
-        self.model_loaded, self.model_num_epoch = load_model(self.args)
+
         default_bucket_key = 1600
         self.args.config.set('arch', 'max_t_count', str(default_bucket_key))
         self.args.config.set('arch', 'max_label_length', str(100))
@@ -246,29 +247,30 @@ class Net(object):
         load_labelutil(labelUtil, is_bi_graphemes, language="zh")
         self.args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
         self.max_t_count = self.args.config.getint('arch', 'max_t_count')
-        self.load_optimizer_states = self.args.config.getboolean('load', 'load_optimizer_states')
-        self.model_file = self.args.config.get('common', 'model_file')
-        self.model_name = os.path.splitext(self.model_file)[0]
-        self.model_num_epoch = int(self.model_name[-4:])
+        # self.load_optimizer_states = self.args.config.getboolean('load', 'load_optimizer_states')
 
-        self.model_path = 'checkpoints/' + str(self.model_name[:-5])
+        # load model
+        self.model_loaded, self.model_num_epoch, self.model_path = load_model(self.args)
 
         self.model = STTBucketingModule(
             sym_gen=self.model_loaded,
             default_bucket_key=default_bucket_key,
             context=self.contexts
         )
-        width = self.args.config.getint('data', 'width')
-        height = self.args.config.getint('data', 'height')
+
         from importlib import import_module
         prepare_data_template = import_module(self.args.config.get('arch', 'arch_file'))
         init_states = prepare_data_template.prepare_data(self.args)
-        _, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
+        width = self.args.config.getint('data', 'width')
+        height = self.args.config.getint('data', 'height')
         self.model.bind(data_shapes=[('data', (self.batch_size, default_bucket_key, width * height))] + init_states,
                         label_shapes=[
                             ('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
                         for_training=True)
+
+        _, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
         self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
+
         try:
             from swig_wrapper import Scorer
 

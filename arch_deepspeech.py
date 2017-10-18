@@ -107,7 +107,6 @@ def arch(args, seq_len=None):
             # model symbol generation
             # input preparation
             data = mx.sym.Variable('data')
-            label = mx.sym.Variable('label')
 
             net = mx.sym.Reshape(data=data, shape=(-4, -1, 1, 0, 0))
             net = conv(net=net,
@@ -172,13 +171,31 @@ def arch(args, seq_len=None):
                               num_hidden_list=num_hidden_rear_fc_list,
                               act_type_list=act_type_rear_fc_list,
                               is_batchnorm=is_batchnorm)
+
+            cls_weight = mx.sym.Variable("cls_weight")
+            cls_bias = mx.sym.Variable("cls_bias")
+            fc_seq = []
+            character_classes_count = args.config.getint('arch', 'n_classes') + 1
+            for seqidx in range(seq_len_after_conv_layer2):
+                hidden = net[seqidx]
+                hidden = mx.sym.FullyConnected(data=hidden,
+                                               num_hidden=character_classes_count,
+                                               weight=cls_weight,
+                                               bias=cls_bias)
+                fc_seq.append(hidden)
+            net = mx.sym.Concat(*fc_seq, dim=0)
+            # if mode == 'predict':
+            #     sm = mx.sym.SoftmaxOutput(data=net, name='softmax')
+            #     output = [sm]
+            #     return mx.sym.Group(output)
+
+            label = mx.sym.Variable('label')
             # warpctc layer
             net = warpctc_layer(net=net,
-                                seq_len=seq_len_after_conv_layer2,
                                 label=label,
                                 num_label=num_label,
-                                character_classes_count=
-                                (args.config.getint('arch', 'n_classes') + 1))
+                                seq_len=seq_len_after_conv_layer2,
+                                character_classes_count=args.config.getint('arch', 'n_classes') + 1)
             args.config.set('arch', 'max_t_count', str(seq_len_after_conv_layer2))
             return net
         elif mode == 'load' or mode == 'predict':
