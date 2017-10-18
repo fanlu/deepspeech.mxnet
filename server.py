@@ -19,6 +19,7 @@ from stt_datagenerator import DataGenerator
 from stt_io_bucketingiter import BucketSTTIter
 from stt_io_iter import STTIter
 from stt_metric import EvalSTTMetric
+from ctc_beam_search_decoder import ctc_beam_search_decoder_log
 
 # os.environ['MXNET_ENGINE_TYPE'] = "NaiveEngine"
 os.environ['MXNET_ENGINE_TYPE'] = "ThreadedEnginePerDevice"
@@ -146,7 +147,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                      'CONTENT_TYPE': self.headers['Content-Type'],
                      })
         filename = form['file'].filename
-        print("filename is: " + str(filename))
+        otherNet.log.info("filename is: " + str(filename))
         output_file_pre = "/Users/lonica/Downloads/wav/"
         part1, part2 = filename.rsplit(".", 1)
         if filename.endswith(".speex"):
@@ -170,7 +171,9 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             open(output_file_pre + part1 + ".wav", "wb").write(data.read())
 
         # create_desc_json.ai_2_word_single(output_file_pre + part1 + ".wav")
+        otherNet.log.info("start")
         trans_res = otherNet.getTrans(output_file_pre + part1 + ".wav")
+        otherNet.log.info("end")
         content = bytes(u"没有检测到语音，请重新录制".encode("utf-8"))
         if trans_res:
             content = bytes(trans_res.encode("utf-8"))
@@ -242,10 +245,10 @@ class Net(object):
         default_bucket_key = 1600
         self.args.config.set('arch', 'max_t_count', str(default_bucket_key))
         self.args.config.set('arch', 'max_label_length', str(100))
-        labelUtil = LabelUtil()
+        self.labelUtil = LabelUtil()
         is_bi_graphemes = self.args.config.getboolean('common', 'is_bi_graphemes')
-        load_labelutil(labelUtil, is_bi_graphemes, language="zh")
-        self.args.config.set('arch', 'n_classes', str(labelUtil.get_count()))
+        load_labelutil(self.labelUtil, is_bi_graphemes, language="zh")
+        self.args.config.set('arch', 'n_classes', str(self.labelUtil.get_count()))
         self.max_t_count = self.args.config.getint('arch', 'max_t_count')
         # self.load_optimizer_states = self.args.config.getboolean('load', 'load_optimizer_states')
 
@@ -274,7 +277,7 @@ class Net(object):
         try:
             from swig_wrapper import Scorer
 
-            vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+            vocab_list = [chars.encode("utf-8") for chars in self.labelUtil.byList]
             self.log.info("vacab_list len is %d" % len(vocab_list))
             _ext_scorer = Scorer(0.26, 0.1, self.args.config.get('common', 'kenlm'), vocab_list)
             lm_char_based = _ext_scorer.is_character_based()
@@ -284,13 +287,15 @@ class Net(object):
                           "is_character_based = %d," % lm_char_based +
                           " max_order = %d," % lm_max_order +
                           " dict_size = %d" % lm_dict_size)
-            self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
-                                             scorer=_ext_scorer)
+            self.scorer = _ext_scorer
+            # self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
+            #                                  scorer=_ext_scorer)
         except ImportError:
             import kenlm
             km = kenlm.Model(self.args.config.get('common', 'kenlm'))
-            self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
-                                             scorer=km.score)
+            self.scorer = km.score
+            # self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
+            #                                  scorer=km.score)
 
     def getTrans(self, wav_file):
         self.data_train, self.args = load_data(self.args, wav_file)
@@ -305,20 +310,49 @@ class Net(object):
         for nbatch, data_batch in enumerate(self.data_train):
             st = time.time()
             model_loaded.forward(data_batch, is_train=False)
+            probs = model_loaded.get_outputs()[0].asnumpy()
             self.log.info("forward cost %.2f" % (time.time() - st))
-            st = time.time()
-            model_loaded.update_metric(self.eval_metric, data_batch.label)
-            self.log.info("upate metric cost %.2f" % (time.time() - st))
-            # print("my res is:")
-            # print(eval_metric.placeholder)
-            return self.eval_metric.placeholder
+            beam_size = 5
+            try:
+                from swig_wrapper import ctc_beam_search_decoder
+
+                st2 = time.time()
+                vocab_list = [chars.encode("utf-8") for chars in self.labelUtil.byList]
+                beam_search_results = ctc_beam_search_decoder(
+                    probs_seq=np.array(probs),
+                    vocabulary=vocab_list,
+                    beam_size=beam_size,
+                    blank_id=0,
+                    ext_scoring_func=self.scorer,
+                    cutoff_prob=0.99,
+                    cutoff_top_n=40
+                )
+                results = [result[1] for result in beam_search_results]
+                self.log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
+                res_str = "\n".join(results)
+            except ImportError:
+                st = time.time()
+
+                beam_result = ctc_beam_search_decoder_log(
+                    probs_seq=probs,
+                    beam_size=beam_size,
+                    vocabulary=self.labelUtil.byIndex,
+                    blank_id=0,
+                    cutoff_prob=0.99,
+                    ext_scoring_func=self.scorer
+                )
+                st1 = time.time() - st
+                results = [result[1] for result in beam_result]
+                res_str = "\n".join(results)
+                self.log.info("decode by py cost %.2fs:\n%s" % (st1, res_str))
+        return res_str
 
 
 otherNet = Net()
 
 if __name__ == '__main__':
     server = HTTPServer(('', 8089), SimpleHTTPRequestHandler)
-    print('Started httpserver on port')
+    otherNet.log.info('Started httpserver on port')
 
     # Wait forever for incoming htto requests
     server.serve_forever()
