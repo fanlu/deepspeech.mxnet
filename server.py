@@ -148,7 +148,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                      })
         filename = form['file'].filename
         otherNet.log.info("filename is: " + str(filename))
-        output_file_pre = "/Users/lonica/Downloads/wav/"
+        output_file_pre = otherNet.args.config.get("common", "wav_dir")
         part1, part2 = filename.rsplit(".", 1)
         if filename.endswith(".speex"):
             data = form['file'].file.read()
