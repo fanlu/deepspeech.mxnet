@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import BaseHTTPServer
 import cgi
 import json
@@ -311,7 +312,7 @@ class Net(object):
 otherNet = Net()
 
 if __name__ == '__main__':
-    server = HTTPServer(('', 8088), SimpleHTTPRequestHandler)
+    server = HTTPServer(('', 8089), SimpleHTTPRequestHandler)
     print('Started httpserver on port')
 
     # Wait forever for incoming htto requests

@@ -8,7 +8,7 @@ from label_util import LabelUtil
 from log_util import LogUtil
 from ctc_beam_search_decoder import ctc_beam_search_decoder, ctc_beam_search_decoder_log
 import kenlm
-
+import time
 
 # import tensorflow as tf
 # from tensorflow.python.framework import ops
@@ -138,37 +138,39 @@ class EvalSTTMetric(STTMetric):
                 p = pred_best(p)
 
                 beam_size = 5
-                import time
-                from swig_wrapper import ctc_beam_search_decoder
 
-                st2 = time.time()
-                vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
-                beam_search_results = ctc_beam_search_decoder(
-                    probs_seq=np.array(probs),
-                    vocabulary=vocab_list,
-                    beam_size=beam_size,
-                    blank_id=0,
-                    ext_scoring_func=self.scorer,
-                    cutoff_prob=0.99,
-                    cutoff_top_n=40
-                )
-                results = [result[1] for result in beam_search_results]
-                log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
-                res_str = "\n".join(results)
-                # st = time.time()
-                #
-                # beam_result = ctc_beam_search_decoder_log(
-                #     probs_seq=probs,
-                #     beam_size=beam_size,
-                #     vocabulary=labelUtil.byIndex,
-                #     blank_id=0,
-                #     cutoff_prob=0.99,
-                #     ext_scoring_func=self.model.score
-                # )
-                # st1 = time.time() - st
-                # for index in range(len(beam_result)):
-                #     res_str += beam_result[index][1] + "\n"
-                # log.info("decode by py cost %.2fs:\n%s" % (st1, res_str))
+                try:
+                    from swig_wrapper import ctc_beam_search_decoder
+
+                    st2 = time.time()
+                    vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+                    beam_search_results = ctc_beam_search_decoder(
+                        probs_seq=np.array(probs),
+                        vocabulary=vocab_list,
+                        beam_size=beam_size,
+                        blank_id=0,
+                        ext_scoring_func=self.scorer,
+                        cutoff_prob=0.99,
+                        cutoff_top_n=40
+                    )
+                    results = [result[1] for result in beam_search_results]
+                    log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
+                    res_str = "\n".join(results)
+                except:
+                    st = time.time()
+
+                    beam_result = ctc_beam_search_decoder_log(
+                        probs_seq=probs,
+                        beam_size=beam_size,
+                        vocabulary=labelUtil.byIndex,
+                        blank_id=0,
+                        cutoff_prob=0.99,
+                        ext_scoring_func=self.model.score
+                    )
+                    st1 = time.time() - st
+                    results = [result[1] for result in beam_result]
+                    res_str = "\n".join(results)
+                    log.info("decode by py cost %.2fs:\n%s" % (st1, res_str))
 
                 res_str1 = labelUtil.convert_num_to_word(p)
                 log.info("decode by pred_best: %s" % res_str1)

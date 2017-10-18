@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from datetime import datetime
-
+import time
 import mxnet as mx
 import numpy as np
 
@@ -391,26 +391,32 @@ if __name__ == '__main__':
             model_loaded.bind(for_training=False, data_shapes=data_train.provide_data,
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
-        # import kenlm
-        # km = kenlm.Model(args.config.get('common', 'kenlm'))
-        from swig_wrapper import Scorer
 
-        labelUtil = LabelUtil()
-        vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
-        log.info("vacab_list len is %d" % len(vocab_list))
-        _ext_scorer = Scorer(0.26, 0.1, args.config.get('common', 'kenlm'), vocab_list)
-        lm_char_based = _ext_scorer.is_character_based()
-        lm_max_order = _ext_scorer.get_max_order()
-        lm_dict_size = _ext_scorer.get_dict_size()
-        log.info("language model: "
-                 "is_character_based = %d," % lm_char_based +
-                 " max_order = %d," % lm_max_order +
-                 " dict_size = %d" % lm_dict_size)
-        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=None, scorer=_ext_scorer)
+        try:
+            from swig_wrapper import Scorer
+
+            labelUtil = LabelUtil()
+            vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+            log.info("vacab_list len is %d" % len(vocab_list))
+            _ext_scorer = Scorer(0.26, 0.1, args.config.get('common', 'kenlm'), vocab_list)
+            lm_char_based = _ext_scorer.is_character_based()
+            lm_max_order = _ext_scorer.get_max_order()
+            lm_dict_size = _ext_scorer.get_dict_size()
+            log.info("language model: "
+                     "is_character_based = %d," % lm_char_based +
+                     " max_order = %d," % lm_max_order +
+                     " dict_size = %d" % lm_dict_size)
+            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=None, scorer=_ext_scorer)
+        except:
+            import kenlm
+            km = kenlm.Model(args.config.get('common', 'kenlm'))
+            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, model=km, scorer=None)
         if is_batchnorm:
+            st = time.time()
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
+            log.info("time spent is %.2f" % time.time() - st)
         else:
             # model_loaded.score(eval_data=data_train, num_batch=None,
             #                   eval_metric=eval_metric, reset=True)
