@@ -416,7 +416,7 @@ if __name__ == '__main__':
             for nbatch, data_batch in enumerate(data_train):
                 model_loaded.forward(data_batch, is_train=False)
                 model_loaded.update_metric(eval_metric, data_batch.label)
-            log.info("time spent is %.2f" % time.time() - st)
+            log.info("time spent is %.2f" % (time.time() - st))
         else:
             # model_loaded.score(eval_data=data_train, num_batch=None,
             #                   eval_metric=eval_metric, reset=True)
