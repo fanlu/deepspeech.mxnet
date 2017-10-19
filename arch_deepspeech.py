@@ -138,7 +138,7 @@ def arch(args, seq_len=None):
                            / conv_layer2_stride[0])) + 1
             net = slice_symbol_to_seq_symobls(net=net, seq_len=seq_len_after_conv_layer2, axis=1)
             if rnn_type == "bilstm":
-                net = bi_lstm_unroll(net=net,
+                net, f_states, b_states = bi_lstm_unroll(net=net,
                                      seq_len=seq_len_after_conv_layer2,
                                      num_hidden_lstm_list=num_hidden_rnn_list,
                                      num_lstm_layer=num_rnn_layer,
@@ -184,10 +184,13 @@ def arch(args, seq_len=None):
                                                bias=cls_bias)
                 fc_seq.append(hidden)
             net = mx.sym.Concat(*fc_seq, dim=0)
-            # if mode == 'predict':
-            #     sm = mx.sym.SoftmaxOutput(data=net, name='softmax')
-            #     output = [sm]
-            #     return mx.sym.Group(output)
+            if mode == 'predict':
+                sm = mx.sym.SoftmaxOutput(data=net, name='softmax')
+                output = [sm]
+                for state in b_states + f_states:
+                    output.append(state.c)
+                    output.append(state.h)
+                return mx.sym.Group(output)
 
             label = mx.sym.Variable('label')
             # warpctc layer
@@ -228,7 +231,7 @@ class BucketingArch(object):
         init_states = prepare_data(args)
         init_state_names = [x[0] for x in init_states]
         init_state_names.insert(0, 'data')
-        return net, init_state_names, ('label',)
+        return net, init_state_names, ('softmax_label',)
 
     def get_sym_gen(self):
         return self.sym_gen

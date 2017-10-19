@@ -217,13 +217,13 @@ def lstm_unroll(net, num_lstm_layer, seq_len, num_hidden_lstm_list, dropout=0., 
             else:
                 raise Exception("direction should be whether forward or backward")
         net = hidden_all
-    return net
+    return net, last_states
 
 
 def bi_lstm_unroll(net, num_lstm_layer, seq_len, num_hidden_lstm_list, dropout=0., num_hidden_proj=0,
                    lstm_type='fc_lstm', is_batchnorm=False, is_bucketing=False):
     if num_lstm_layer > 0:
-        net_forward = lstm_unroll(net=net,
+        net_forward, forward_states = lstm_unroll(net=net,
                                   num_lstm_layer=num_lstm_layer,
                                   seq_len=seq_len,
                                   num_hidden_lstm_list=num_hidden_lstm_list,
@@ -235,7 +235,7 @@ def bi_lstm_unroll(net, num_lstm_layer, seq_len, num_hidden_lstm_list, dropout=0
                                   direction="forward",
                                   is_bucketing=is_bucketing)
 
-        net_backward = lstm_unroll(net=net,
+        net_backward, backward_states = lstm_unroll(net=net,
                                    num_lstm_layer=num_lstm_layer,
                                    seq_len=seq_len,
                                    num_hidden_lstm_list=num_hidden_lstm_list,
@@ -256,7 +256,7 @@ def bi_lstm_unroll(net, num_lstm_layer, seq_len, num_hidden_lstm_list, dropout=0
         #     else:
         #         hidden_final.append(mx.sym.Reshape(h, target_shape=(0, num_hidden_lstm_list[-1])))
         net = hidden_all
-    return net
+    return net, forward_states, backward_states
 
 
 # bilistm_2to1
