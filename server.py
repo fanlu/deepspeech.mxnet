@@ -2,7 +2,7 @@
 import BaseHTTPServer
 import cgi
 import json
-import os
+import os, subprocess
 import sys
 from BaseHTTPServer import HTTPServer
 from datetime import datetime
@@ -161,8 +161,13 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif filename.endswith(".amr"):
             data = form['file'].file.read()
             open(output_file_pre + filename, "wb").write(data)
-            command = "ffmpeg -y -i " + output_file_pre + part1 + ".amr -acodec pcm_s16le -ar 16000 -ac 1 -b 256 " + output_file_pre + part1 + ".wav"
-            os.system(command)
+            # command = "ffmpeg -y -i " + output_file_pre + part1 + ".amr -acodec pcm_s16le -ar 16000 -ac 1 -b 256 " + output_file_pre + part1 + ".wav"
+            subprocess.call(
+                ["ffmpeg", "-y", "-i", output_file_pre + part1 + ".amr", "-acodec", "pcm_s16le", "-ar", "16000", "-ac",
+                 "1", output_file_pre + part1 + ".wav"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, shell=False)
+            # otherNet.log.info(command)
+            # os.system(command)
 
         elif filename.lower().endswith(".wav"):
             data = form['file'].file
@@ -241,7 +246,6 @@ class Net(object):
         self.config_logger = ConfigLogger(self.log)
         self.config_logger(self.args.config)
 
-
         default_bucket_key = 1600
         self.args.config.set('arch', 'max_t_count', str(default_bucket_key))
         self.args.config.set('arch', 'max_label_length', str(100))
@@ -313,39 +317,11 @@ class Net(object):
             probs = model_loaded.get_outputs()[0].asnumpy()
             self.log.info("forward cost %.2f" % (time.time() - st))
             beam_size = 5
-            try:
-                from swig_wrapper import ctc_beam_search_decoder
-
-                st2 = time.time()
-                vocab_list = [chars.encode("utf-8") for chars in self.labelUtil.byList]
-                beam_search_results = ctc_beam_search_decoder(
-                    probs_seq=np.array(probs),
-                    vocabulary=vocab_list,
-                    beam_size=beam_size,
-                    blank_id=0,
-                    ext_scoring_func=self.scorer,
-                    cutoff_prob=0.99,
-                    cutoff_top_n=40
-                )
-                results = [result[1] for result in beam_search_results]
-                self.log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
-                res_str = "\n".join(results)
-            except ImportError:
-                st = time.time()
-
-                beam_result = ctc_beam_search_decoder_log(
-                    probs_seq=probs,
-                    beam_size=beam_size,
-                    vocabulary=self.labelUtil.byIndex,
-                    blank_id=0,
-                    cutoff_prob=0.99,
-                    ext_scoring_func=self.scorer
-                )
-                st1 = time.time() - st
-                results = [result[1] for result in beam_result]
-                res_str = "\n".join(results)
-                self.log.info("decode by py cost %.2fs:\n%s" % (st1, res_str))
-        return res_str
+            from stt_metric import ctc_beam_decode
+            st = time.time()
+            results = ctc_beam_decode(scorer=self.scorer, beam_size=beam_size, vocab=self.labelUtil.byList, probs=probs)
+            self.log.info("decode cost %.2f, result is:\n%s" % (time.time()-st, "\n".join(results)))
+        return "\n".join(results)
 
 
 otherNet = Net()

@@ -10,6 +10,7 @@ from ctc_beam_search_decoder import ctc_beam_search_decoder, ctc_beam_search_dec
 import kenlm
 import time
 
+
 # import tensorflow as tf
 # from tensorflow.python.framework import ops
 # from tensorflow.python.ops import array_ops
@@ -121,7 +122,6 @@ class EvalSTTMetric(STTMetric):
         self.batch_loss = 0.
         shouldPrint = True
         host_name = socket.gethostname()
-        res_str = ""
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
             pred = pred.asnumpy()
@@ -135,41 +135,10 @@ class EvalSTTMetric(STTMetric):
                     p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
                     probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
                 p = pred_best(p)
-
+                st = time.time()
                 beam_size = 5
-
-                try:
-                    from swig_wrapper import ctc_beam_search_decoder
-
-                    st2 = time.time()
-                    vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
-                    beam_search_results = ctc_beam_search_decoder(
-                        probs_seq=np.array(probs),
-                        vocabulary=vocab_list,
-                        beam_size=beam_size,
-                        blank_id=0,
-                        ext_scoring_func=self.scorer,
-                        cutoff_prob=0.99,
-                        cutoff_top_n=40
-                    )
-                    results = [result[1] for result in beam_search_results]
-                    log.info("decode by cpp cost %.2fs:\n%s" % (time.time() - st2, "\n".join(results)))
-                    res_str = "\n".join(results)
-                except ImportError:
-                    st = time.time()
-
-                    beam_result = ctc_beam_search_decoder_log(
-                        probs_seq=probs,
-                        beam_size=beam_size,
-                        vocabulary=labelUtil.byIndex,
-                        blank_id=0,
-                        cutoff_prob=0.99,
-                        ext_scoring_func=self.scorer
-                    )
-                    st1 = time.time() - st
-                    results = [result[1] for result in beam_result]
-                    res_str = "\n".join(results)
-                    log.info("decode by py cost %.2fs:\n%s" % (st1, res_str))
+                results = ctc_beam_decode(self.scorer, beam_size, labelUtil.byList, probs)
+                log.info("decode by ctc_beam cost %.2f result: %s" % (time.time() - st, "\n".join(results)))
 
                 res_str1 = labelUtil.convert_num_to_word(p)
                 log.info("decode by pred_best: %s" % res_str1)
@@ -219,7 +188,7 @@ class EvalSTTMetric(STTMetric):
                         host_name, " ".join(results[0]), float(l_distance_beam_cpp) / len(l), l_distance_beam_cpp,
                         len(l)))
                 self.total_ctc_loss += self.batch_loss
-                self.placeholder = res_str1 + "\n" + res_str
+                self.placeholder = res_str1 + "\n" + "\n".join(results)
 
     def get_name_value(self):
         total_cer = float(self.total_l_dist) / (float(self.total_n_label) if self.total_n_label > 0 else 0.001)
@@ -239,6 +208,33 @@ class EvalSTTMetric(STTMetric):
         self.sum_metric = 0.0
         self.total_ctc_loss = 0.0
         self.audio_paths = []
+
+
+def ctc_beam_decode(scorer, beam_size, vocab, probs):
+    try:
+        from swig_wrapper import ctc_beam_search_decoder
+        vocab_list = [chars.encode("utf-8") for chars in vocab]
+        beam_search_results = ctc_beam_search_decoder(
+            probs_seq=np.array(probs),
+            vocabulary=vocab_list,
+            beam_size=beam_size,
+            blank_id=0,
+            ext_scoring_func=scorer,
+            cutoff_prob=0.99,
+            cutoff_top_n=40
+        )
+        results = [result[1] for result in beam_search_results]
+    except ImportError:
+        beam_result = ctc_beam_search_decoder_log(
+            probs_seq=probs,
+            beam_size=beam_size,
+            vocabulary=dict(zip(range(1, len(vocab) + 1), vocab)),
+            blank_id=0,
+            cutoff_prob=0.99,
+            ext_scoring_func=scorer
+        )
+        results = [result[1] for result in beam_result]
+    return results
 
 
 def pred_best(p):
