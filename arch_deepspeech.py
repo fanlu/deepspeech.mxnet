@@ -183,15 +183,14 @@ def arch(args, seq_len=None):
                                                weight=cls_weight,
                                                bias=cls_bias)
                 fc_seq.append(hidden)
-            net = mx.sym.Concat(*fc_seq, dim=0)
-            if mode == 'predict':
+            net = mx.sym.Concat(*fc_seq, dim=0, name="warpctc_layer_concat")
+            if mode == 'server':
                 sm = mx.sym.SoftmaxOutput(data=net, name='softmax')
                 output = [sm]
                 for state in b_states + f_states:
                     output.append(state.c)
                     output.append(state.h)
                 return mx.sym.Group(output)
-
             label = mx.sym.Variable('label')
             # warpctc layer
             net = warpctc_layer(net=net,
@@ -231,7 +230,10 @@ class BucketingArch(object):
         init_states = prepare_data(args)
         init_state_names = [x[0] for x in init_states]
         init_state_names.insert(0, 'data')
-        return net, init_state_names, ('softmax_label',)
+        mode = args.config.get("common", "mode")
+        if mode == "server":
+            return net, init_state_names, ('softmax_label',)
+        return net, init_state_names, ('label',)
 
     def get_sym_gen(self):
         return self.sym_gen

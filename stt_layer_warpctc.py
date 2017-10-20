@@ -17,6 +17,7 @@ def warpctc_layer(net, label, num_label, seq_len, character_classes_count):
     label = mx.sym.Reshape(data=label, shape=(-1,))
     label = mx.sym.Cast(data=label, dtype='int32')
 
-    net = mx.sym.WarpCTC(data=net, label=label, label_length=num_label, input_length=seq_len)
+    net = mx.sym.WarpCTC(data=net, label=label, label_length=num_label, input_length=seq_len,
+                         name="warpctc_layer_warpctc")
 
     return net
