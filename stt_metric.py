@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import socket
 
 import editdistance
@@ -9,6 +10,7 @@ from log_util import LogUtil
 from ctc_beam_search_decoder import ctc_beam_search_decoder, ctc_beam_search_decoder_log
 import kenlm
 import time
+from itertools import groupby
 
 
 # import tensorflow as tf
@@ -129,18 +131,19 @@ class EvalSTTMetric(STTMetric):
             # sess = tf.Session()
             for i in range(int(int(self.batch_size) / int(self.num_gpu))):
                 l = remove_blank(label[i])
-                p = []
+                # p = []
                 probs = []
                 for k in range(int(seq_length)):
-                    p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
+                    # p.append(np.argmax(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i]))
                     probs.append(pred[k * int(int(self.batch_size) / int(self.num_gpu)) + i])
-                p = pred_best(p)
+                # p = pred_best(p)
+                probs = np.array(probs)
                 st = time.time()
                 beam_size = 5
                 results = ctc_beam_decode(self.scorer, beam_size, labelUtil.byList, probs)
                 log.info("decode by ctc_beam cost %.2f result: %s" % (time.time() - st, "\n".join(results)))
 
-                res_str1 = labelUtil.convert_num_to_word(p)
+                res_str1 = ctc_greedy_decode(probs, labelUtil.byList)
                 log.info("decode by pred_best: %s" % res_str1)
 
                 # max_time_steps = int(seq_length)
@@ -166,7 +169,7 @@ class EvalSTTMetric(STTMetric):
                 # for index in range(3):
                 #   tf_result = ''.join([labelUtil.byIndex.get(i + 1, ' ') for i in tf_decoded[index].values])
                 #   print("%.2f elpse %.2f, %s" % (tf_log_probs[0][index], st1, tf_result))
-                l_distance = editdistance.eval(l, p)
+                l_distance = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), res_str1)
                 # l_distance_beam = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), beam_result[0][1])
                 l_distance_beam_cpp = editdistance.eval(labelUtil.convert_num_to_word(l).split(" "), results[0])
                 self.total_n_label += len(l)
@@ -180,7 +183,7 @@ class EvalSTTMetric(STTMetric):
                     #     host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
                     log.info("%s label: %s " % (host_name, labelUtil.convert_num_to_word(l)))
                     log.info("%s pred : %s , cer: %f (distance: %d/ label length: %d)" % (
-                        host_name, labelUtil.convert_num_to_word(p), this_cer, l_distance, len(l)))
+                        host_name, res_str1, this_cer, l_distance, len(l)))
                     # log.info("%s predb: %s , cer: %f (distance: %d/ label length: %d)" % (
                     #     host_name, " ".join(beam_result[0][1]), float(l_distance_beam) / len(l), l_distance_beam,
                     #     len(l)))
@@ -210,10 +213,51 @@ class EvalSTTMetric(STTMetric):
         self.audio_paths = []
 
 
+def ctc_greedy_decoder_py(probs_seq, vocabulary):
+    """CTC greedy (best path) decoder.
+
+    Path consisting of the most probable tokens are further post-processed to
+    remove consecutive repetitions and all blanks.
+
+    :param probs_seq: 2-D list of probabilities over the vocabulary for each
+                      character. Each element is a list of float probabilities
+                      for one character.
+    :type probs_seq: list
+    :param vocabulary: Vocabulary list.
+    :type vocabulary: list
+    :return: Decoding result string.
+    :rtype: baseline
+    """
+    # dimension verification
+    for probs in probs_seq:
+        if not len(probs) == len(vocabulary) + 1:
+            raise ValueError("probs_seq dimension mismatchedd with vocabulary")
+    # argmax to get the best index for each time step
+    max_index_list = list(np.array(probs_seq).argmax(axis=1))
+    # remove consecutive duplicate indexes
+    index_list = [index_group[0] for index_group in groupby(max_index_list)]
+    # remove blank indexes
+    blank_index = len(vocabulary)
+    index_list = [index for index in index_list if index != blank_index]
+    # convert index list to string
+    return ''.join([vocabulary[index].decode("utf-8") for index in index_list])
+
+
+def ctc_greedy_decode(probs, vocab):
+    vocab_list = [chars.encode("utf-8") for chars in vocab]
+    probs = np.c_[probs[:, 1:], probs[:, 0]]
+    try:
+        from swig_wrapper import ctc_greedy_decoder
+        return ctc_greedy_decoder(probs, vocab_list)
+    except ImportError:
+        return ctc_greedy_decoder_py(probs, vocab_list)
+
+
 def ctc_beam_decode(scorer, beam_size, vocab, probs):
     try:
         from swig_wrapper import ctc_beam_search_decoder
         vocab_list = [chars.encode("utf-8") for chars in vocab]
+        probs = np.c_[probs[:, 1:], probs[:, 0]]
         beam_search_results = ctc_beam_search_decoder(
             probs_seq=np.array(probs),
             vocabulary=vocab_list,

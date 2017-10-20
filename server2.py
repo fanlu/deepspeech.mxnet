@@ -18,6 +18,7 @@ from label_util import LabelUtil
 from log_util import LogUtil
 from main import load_labelutil
 from stt_datagenerator import DataGenerator
+from stt_metric import ctc_greedy_decode
 from stt_utils import spectrogram_from_file
 
 # os.environ['MXNET_ENGINE_TYPE'] = "NaiveEngine"
@@ -195,9 +196,9 @@ class Net(object):
             lm_max_order = _ext_scorer.get_max_order()
             lm_dict_size = _ext_scorer.get_dict_size()
             log.info("language model: "
-                          "is_character_based = %d," % lm_char_based +
-                          " max_order = %d," % lm_max_order +
-                          " dict_size = %d" % lm_dict_size)
+                     "is_character_based = %d," % lm_char_based +
+                     " max_order = %d," % lm_max_order +
+                     " dict_size = %d" % lm_dict_size)
             self.scorer = _ext_scorer
             # self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
             #                                  scorer=_ext_scorer)
@@ -225,14 +226,16 @@ class Net(object):
         st = time.time()
         model_loaded.forward(data_batch, is_train=False)
         probs = model_loaded.get_outputs()[0].asnumpy()
-	probs = np.c_[probs[:,1:],probs[:,0]]
-        log.info("forward cost %.2f" % (time.time() - st))
+        log.info("forward cost %.3f" % (time.time() - st))
+        st = time.time()
+        res = ctc_greedy_decode(probs, self.labelUtil.byList)
+        log.info("greedy decode cost %.3f, result is:\n%s" % (time.time() - st, res))
         beam_size = 5
         from stt_metric import ctc_beam_decode
         st = time.time()
         results = ctc_beam_decode(scorer=self.scorer, beam_size=beam_size, vocab=self.labelUtil.byList, probs=probs)
-        log.info("decode cost %.2f, result is:\n%s" % (time.time() - st, "\n".join(results)))
-        return "\n".join(results)
+        log.info("beam decode cost %.3f, result is:\n%s" % (time.time() - st, "\n".join(results)))
+        return "greedy:\n" + res + "\nbeam:\n" + "\n".join(results)
 
 
 if __name__ == '__main__':
