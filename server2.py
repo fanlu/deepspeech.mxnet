@@ -225,6 +225,7 @@ class Net(object):
         st = time.time()
         model_loaded.forward(data_batch, is_train=False)
         probs = model_loaded.get_outputs()[0].asnumpy()
+	probs = np.c_[probs[:,1:],probs[:,0]]
         log.info("forward cost %.2f" % (time.time() - st))
         beam_size = 5
         from stt_metric import ctc_beam_decode

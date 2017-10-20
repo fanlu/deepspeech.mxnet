@@ -218,7 +218,6 @@ def ctc_beam_decode(scorer, beam_size, vocab, probs):
             probs_seq=np.array(probs),
             vocabulary=vocab_list,
             beam_size=beam_size,
-            blank_id=0,
             ext_scoring_func=scorer,
             cutoff_prob=0.99,
             cutoff_top_n=40
