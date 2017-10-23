@@ -6,6 +6,7 @@ import os.path
 import numpy as np
 import soundfile
 from numpy.lib.stride_tricks import as_strided
+from data_utils.audio import AudioSegment
 import random
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ def spectrogram(samples, fft_length=256, sample_rate=2, hop_length=128):
 
 def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
                           eps=1e-14, overwrite=False, save_feature_as_csvfile=False,
-                          noise_percent=0.4, seq_length=-1):
+                          noise_percent=0.4, speed_percent=0, seq_length=-1):
     """ Calculate the log of linear spectrogram from FFT energy
     Params:
         filename (str): Path to the audio file
@@ -112,6 +113,13 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
     if (os.path.isfile(csvfilename) is False) or overwrite:
         with soundfile.SoundFile(filename) as sound_file:
             audio = sound_file.read(dtype='float32')
+            if random.random() < noise_percent and seq_length > 0:
+                temp_audio = AudioSegment(audio, sound_file.samplerate)
+                audio_length = audio.shape[0]
+                max_length_ratio = min(int((float(audio_length) / (seq_length - 100) / sound_file.samplerate) * 10000), 120)
+                min_length_ratio = max(int(np.math.ceil((float(audio_length) / seq_length / sound_file.samplerate) * 10000)), 80)
+                temp_audio.change_speed(random.randint(min_length_ratio, max_length_ratio) / 100.)
+                audio = temp_audio.samples
             if random.random() < noise_percent:
                 if seq_length != -1:
                     max_length = seq_length * sound_file.samplerate / 100
