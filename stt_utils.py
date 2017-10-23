@@ -6,7 +6,6 @@ import os.path
 import numpy as np
 import soundfile
 from numpy.lib.stride_tricks import as_strided
-from data_utils.audio import AudioSegment
 import random
 
 logger = logging.getLogger(__name__)
@@ -114,12 +113,14 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
         with soundfile.SoundFile(filename) as sound_file:
             audio = sound_file.read(dtype='float32')
             if random.random() < noise_percent and seq_length > 0:
-                temp_audio = AudioSegment(audio, sound_file.samplerate)
                 audio_length = audio.shape[0]
                 max_length_ratio = min(int((float(audio_length) / (seq_length - 100) / sound_file.samplerate) * 10000), 120)
                 min_length_ratio = max(int(np.math.ceil((float(audio_length) / seq_length / sound_file.samplerate) * 10000)), 80)
-                temp_audio.change_speed(random.randint(min_length_ratio, max_length_ratio) / 100.)
-                audio = temp_audio.samples
+                speed_rate = random.randint(min_length_ratio, max_length_ratio) / 100.
+                new_length = int(audio_length / speed_rate)
+                old_indices = np.arange(audio_length)
+                new_indices = np.linspace(start=0, stop=audio_length, num=new_length)
+                audio = np.interp(new_indices, old_indices, audio)
             if random.random() < noise_percent:
                 if seq_length != -1:
                     max_length = seq_length * sound_file.samplerate / 100
