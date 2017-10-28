@@ -190,6 +190,20 @@ def arch(args, seq_len=None):
                               num_hidden_list=num_hidden_rear_fc_list,
                               act_type_list=act_type_rear_fc_list,
                               is_batchnorm=is_batchnorm)
+
+            cls_weight = mx.sym.Variable("cls_weight")
+            cls_bias = mx.sym.Variable("cls_bias")
+            fc_seq = []
+            character_classes_count = args.config.getint('arch', 'n_classes') + 1
+            for seqidx in range(seq_len_after_conv_layer3):
+                hidden = net[seqidx]
+                hidden = mx.sym.FullyConnected(data=hidden,
+                                               num_hidden=character_classes_count,
+                                               weight=cls_weight,
+                                               bias=cls_bias)
+                fc_seq.append(hidden)
+            net = mx.sym.Concat(*fc_seq, dim=0, name="warpctc_layer_concat")
+
             # warpctc layer
             net = warpctc_layer(net=net,
                                 seq_len=seq_len_after_conv_layer3,

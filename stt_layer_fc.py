@@ -69,7 +69,7 @@ def sequence_fc(net,
                     if type(one_net) is not mx.symbol.Symbol:
                         raise Exception('%d th elements of the net should be mx.symbol.Symbol' % net_index)
             else:
-                raise Exception('type of net should be whether mx.symbol.Symbol or list of mx.symbol.Symbol')
+                raise Exception('type of net should be whether mx.symbol.Symbol or list of mx.symbol.Symbol. type is %s' % type(net))
             hidden_all = []
             for seq_index in range(seq_len):
                 hidden = net[seq_index]
