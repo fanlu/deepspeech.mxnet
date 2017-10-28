@@ -157,7 +157,7 @@ def arch(args, seq_len=None):
                            / conv_layer3_stride[0])) + 1
             net = slice_symbol_to_seq_symobls(net=net, seq_len=seq_len_after_conv_layer3, axis=1)
             if rnn_type == "bilstm":
-                net = bi_lstm_unroll(net=net,
+                net, f_states, b_states = bi_lstm_unroll(net=net,
                                      seq_len=seq_len_after_conv_layer3,
                                      num_hidden_lstm_list=num_hidden_rnn_list,
                                      num_lstm_layer=num_rnn_layer,
