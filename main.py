@@ -98,6 +98,7 @@ def load_data(args, kv=None):
     overwrite_bi_graphemes_dictionary = args.config.getboolean('train', 'overwrite_bi_graphemes_dictionary')
     max_duration = args.config.getfloat('data', 'max_duration')
     language = args.config.get('data', 'language')
+    fbank = args.config.getboolean("data", "fbank")
 
     log = LogUtil().getlogger()
     labelUtil = LabelUtil()
@@ -174,6 +175,7 @@ def load_data(args, kv=None):
     sort_by_duration = (mode == "train")
     is_bucketing = args.config.getboolean('arch', 'is_bucketing')
     save_feature_as_csvfile = args.config.getboolean('train', 'save_feature_as_csvfile')
+
     if is_bucketing:
         buckets = json.loads(args.config.get('arch', 'buckets'))
         data_loaded = BucketSTTIter(partition="train",
@@ -193,7 +195,8 @@ def load_data(args, kv=None):
                                     save_feature_as_csvfile=save_feature_as_csvfile,
                                     num_parts=kv.num_workers,
                                     part_index=kv.rank,
-                                    noise_percent=noise_percent)
+                                    noise_percent=noise_percent,
+                                    fbank=fbank)
     else:
         data_loaded = STTIter(partition="train",
                               count=datagen.count,
@@ -228,7 +231,8 @@ def load_data(args, kv=None):
                                               save_feature_as_csvfile=save_feature_as_csvfile,
                                               # num_parts=kv.num_workers,
                                               # part_index=kv.rank,
-                                              noise_percent=0
+                                              noise_percent=0,
+                                              fbank=fbank
                                               )
         else:
             validation_loaded = STTIter(partition="validation",

@@ -33,7 +33,8 @@ class BucketSTTIter(mx.io.DataIter):
                  save_feature_as_csvfile=False,
                  num_parts=1,
                  part_index=0,
-                 noise_percent=0.4
+                 noise_percent=0.4,
+                 fbank=False
                  ):
         super(BucketSTTIter, self).__init__()
 
@@ -54,6 +55,7 @@ class BucketSTTIter(mx.io.DataIter):
         self.num_parts = num_parts
         self.part_index = part_index
         self.noise_percent = noise_percent
+        self.fbank = fbank
         # self.partition = datagen.partition
         if partition == 'train':
             durations = datagen.train_durations
@@ -95,7 +97,7 @@ class BucketSTTIter(mx.io.DataIter):
         if len(buckets) == 0:
             raise Exception(
                 'There is no valid buckets. It may occured by large batch_size for each buckets. max bincount:%d batch_size:%d' % (
-                max(np.bincount(data_lengths)), batch_size))
+                    max(np.bincount(data_lengths)), batch_size))
         buckets.sort()
         ndiscard = 0
         self.data = [[] for _ in buckets]
@@ -125,7 +127,10 @@ class BucketSTTIter(mx.io.DataIter):
             self.idx.extend([(i, j) for j in range(0, len(buck) - batch_size + 1, batch_size)])
         self.curr_idx = 0
 
-        self.provide_data = [('data', (self.batch_size, self.default_bucket_key, width * height))] + init_states
+        if not self.fbank:
+            self.provide_data = [('data', (self.batch_size, self.default_bucket_key, width * height))] + init_states
+        else:
+            self.provide_data = [('data', (self.batch_size, 3, self.default_bucket_key, 41))] + init_states
         self.provide_label = [('label', (self.batch_size, self.maxLabelLength))]
         self.save_feature_as_csvfile = save_feature_as_csvfile
 
@@ -157,27 +162,48 @@ class BucketSTTIter(mx.io.DataIter):
         # log.info("%s, %s, %s" % (socket.gethostname(), audio_paths, durations))
 
         if self.is_first_epoch:
-            data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True,
-                                                      is_bi_graphemes=self.is_bi_graphemes,
-                                                      seq_length=self.buckets[i],
-                                                      save_feature_as_csvfile=self.save_feature_as_csvfile,
-                                                      language=self.language,
-                                                      zh_type=self.zh_type,
-                                                      noise_percent=self.noise_percent)
+            if not self.fbank:
+                data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=True,
+                                                          is_bi_graphemes=self.is_bi_graphemes,
+                                                          seq_length=self.buckets[i],
+                                                          save_feature_as_csvfile=self.save_feature_as_csvfile,
+                                                          language=self.language,
+                                                          zh_type=self.zh_type,
+                                                          noise_percent=self.noise_percent)
+            else:
+                data_set = self.datagen.prepare_minibatch_fbank(audio_paths, texts, overwrite=True,
+                                                                is_bi_graphemes=self.is_bi_graphemes,
+                                                                seq_length=self.buckets[i],
+                                                                save_feature_as_csvfile=self.save_feature_as_csvfile,
+                                                                language=self.language,
+                                                                zh_type=self.zh_type,
+                                                                noise_percent=self.noise_percent)
         else:
-            data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=False,
-                                                      is_bi_graphemes=self.is_bi_graphemes,
-                                                      seq_length=self.buckets[i],
-                                                      save_feature_as_csvfile=self.save_feature_as_csvfile,
-                                                      language=self.language,
-                                                      zh_type=self.zh_type,
-                                                      noise_percent=self.noise_percent)
+            if not self.fbank:
+                data_set = self.datagen.prepare_minibatch(audio_paths, texts, overwrite=False,
+                                                          is_bi_graphemes=self.is_bi_graphemes,
+                                                          seq_length=self.buckets[i],
+                                                          save_feature_as_csvfile=self.save_feature_as_csvfile,
+                                                          language=self.language,
+                                                          zh_type=self.zh_type,
+                                                          noise_percent=self.noise_percent)
+            else:
+                data_set = self.datagen.prepare_minibatch_fbank(audio_paths, texts, overwrite=False,
+                                                                is_bi_graphemes=self.is_bi_graphemes,
+                                                                seq_length=self.buckets[i],
+                                                                save_feature_as_csvfile=self.save_feature_as_csvfile,
+                                                                language=self.language,
+                                                                zh_type=self.zh_type,
+                                                                noise_percent=self.noise_percent)
 
         data_all = [mx.nd.array(data_set['x'])] + self.init_state_arrays
         label_all = [mx.nd.array(data_set['y'])]
 
         self.label = label_all
-        provide_data = [('data', (self.batch_size, self.buckets[i], self.width * self.height))] + self.init_states
+        if not self.fbank:
+            provide_data = [('data', (self.batch_size, self.buckets[i], self.width * self.height))] + self.init_states
+        else:
+            provide_data = [('data', (self.batch_size, 3, self.buckets[i], 41))] + self.init_states
 
         return mx.io.DataBatch(data_all, label_all, pad=0,
                                index=audio_paths,

@@ -10,7 +10,7 @@ import numpy as np
 import concurrent.futures
 import time
 
-from stt_utils import calc_feat_dim, spectrogram_from_file
+from stt_utils import calc_feat_dim, spectrogram_from_file, fbank_from_file
 
 from config_util import generate_file_path
 from log_util import LogUtil
@@ -67,6 +67,9 @@ class DataGenerator(object):
             audio_clip, step=self.step, window=self.window,
             max_freq=self.max_freq, overwrite=overwrite,
             save_feature_as_csvfile=save_feature_as_csvfile, noise_percent=noise_percent, seq_length=seq_length)
+
+    def featurize_fbank(self, audio_clip, overwrite=False, save_feature_as_csvfile=False, noise_percent=0.4, seq_length=-1):
+        return fbank_from_file(audio_clip)
 
     def load_metadata_from_desc_file(self, desc_file, partition='train',
                                      max_duration=16.0, ):
@@ -130,6 +133,11 @@ class DataGenerator(object):
 
     def normalize(self, feature, eps=1e-14):
         return (feature - self.feats_mean) / (self.feats_std + eps)
+
+    def normalize_fbank(self, feature, eps=1e-14):
+        feature = feature.swapaxes(0, 1).reshape(-1, 123)
+        ret = (feature - self.feats_mean) / (self.feats_std + eps)
+        return ret.reshape(-1, 3, 41).swapaxes(0, 1)
 
     def normalize_self(self, feature, eps=1e-14):
         return (feature - np.mean(feature, axis=1)[:, np.newaxis]) / (np.sqrt(
@@ -230,6 +238,68 @@ class DataGenerator(object):
             'label_lengths': label_lengths,  # list(int) Length of each label
         }
 
+    def prepare_minibatch_fbank(self, audio_paths, texts, overwrite=False,
+                                is_bi_graphemes=False, seq_length=-1, save_feature_as_csvfile=False, language="en",
+                                zh_type="zi", noise_percent=0.4):
+        """ Featurize a minibatch of audio, zero pad them and return a dictionary
+        Params:
+            audio_paths (list(str)): List of paths to audio files
+            texts (list(str)): List of texts corresponding to the audio files
+        Returns:
+            dict: See below for contents
+        """
+        assert len(audio_paths) == len(texts), \
+            "Inputs and outputs to the network must be of the same number"
+        # Features is a list of (timesteps, feature_dim(161)) arrays (channel(3), feature_dim(41), timesteps)
+        # Calculate the features for each audio clip, as the log of the
+        # Fourier Transform of the audio
+        features = [
+            self.featurize_fbank(a, overwrite=overwrite, save_feature_as_csvfile=save_feature_as_csvfile,
+                           noise_percent=noise_percent, seq_length=seq_length) for a in
+            audio_paths]
+        input_lengths = [f.shape[1] for f in features]
+        channel, timesteps, feature_dim = features[0].shape
+        mb_size = len(features)
+        # Pad all the inputs so that they are all the same length
+        if seq_length == -1:
+            x = np.zeros((mb_size, channel, self.max_seq_length, feature_dim))
+        else:
+            x = np.zeros((mb_size, channel, seq_length, feature_dim))
+        y = np.zeros((mb_size, self.max_label_length))
+        labelUtil = LabelUtil()
+        label_lengths = []
+        for i in range(mb_size):
+            feat = features[i]
+            feat = self.normalize_fbank(feat)  # Center using means and std
+            x[i, :, :feat.shape[1], :] = feat  # padding with 0 padding with noise？
+            if language == "en" and is_bi_graphemes:
+                label = generate_bi_graphemes_label(texts[i])
+                label = labelUtil.convert_bi_graphemes_to_num(label)
+                y[i, :len(label)] = label
+            elif language == "en" and not is_bi_graphemes:
+                label = labelUtil.convert_word_to_num(texts[i])
+                y[i, :len(texts[i])] = label
+            elif language == "zh" and zh_type == "phone":
+                label = generate_phone_label(texts[i])
+                label = labelUtil.convert_bi_graphemes_to_num(label)
+                y[i, :len(label)] = label
+            elif language == "zh" and zh_type == "py":
+                label = generate_py_label(texts[i])
+                label = labelUtil.convert_bi_graphemes_to_num(label)
+                y[i, :len(label)] = label
+            elif language == "zh" and zh_type == "zi":
+                label = generate_zi_label(texts[i])
+                label = labelUtil.convert_bi_graphemes_to_num(label)
+                y[i, :len(label)] = label
+            label_lengths.append(len(label))
+        return {
+            'x': x,  # (0-padded features of shape(mb_size,timesteps,feat_dim)
+            'y': y,  # list(int) Flattened labels (integer sequences)
+            'texts': texts,  # list(str) Original texts
+            'input_lengths': input_lengths,  # list(int) Length of each input
+            'label_lengths': label_lengths,  # list(int) Length of each label
+        }
+
     def iterate_test(self, minibatch_size=16):
         return self.iterate(self.test_audio_paths, self.test_texts,
                             minibatch_size)
@@ -256,6 +326,55 @@ class DataGenerator(object):
                     feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
                     count += float(next_feat.shape[0])
             return_dict[threadIndex] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+
+    def sample_normalize_fbank(self, k_samples=1000, overwrite=False, noise_percent=0.4):
+        log = LogUtil().getlogger()
+        log.info("Calculating mean and std from samples")
+        # if k_samples is negative then it goes through total dataset
+        if k_samples < 0:
+            audio_paths = self.train_audio_paths * 10
+
+        # using sample
+        else:
+            k_samples = min(k_samples, len(self.train_audio_paths))
+            samples = self.rng.sample(self.train_audio_paths, k_samples)
+            audio_paths = samples
+        return_dict = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
+            feat_dim = 3 * 41
+            feat = np.zeros((1, feat_dim))
+            feat_squared = np.zeros((1, feat_dim))
+            count = 0
+            future_to_f = {
+                executor.submit(fbank_from_file, f, overwrite=overwrite, noise_percent=noise_percent): f for f in
+                audio_paths}
+            for future in concurrent.futures.as_completed(future_to_f):
+                # for f, data in zip(audio_paths, executor.map(spectrogram_from_file, audio_paths, overwrite=overwrite, noise_percent=noise_percent)):
+                f = future_to_f[future]
+                try:
+                    next_feat = future.result().swapaxes(0, 1).reshape(-1, feat_dim)
+                    next_feat_squared = np.square(next_feat)
+                    feat_vertically_stacked = np.concatenate((feat, next_feat)).reshape(-1, feat_dim)
+                    feat = np.sum(feat_vertically_stacked, axis=0, keepdims=True)
+                    feat_squared_vertically_stacked = np.concatenate(
+                        (feat_squared, next_feat_squared)).reshape(-1, feat_dim)
+                    feat_squared = np.sum(feat_squared_vertically_stacked, axis=0, keepdims=True)
+                    count += float(next_feat.shape[0])
+                except Exception as exc:
+                    log.info('%r generated an exception: %s' % (f, exc))
+            return_dict[1] = {'feat': feat, 'feat_squared': feat_squared, 'count': count}
+
+        feat = np.sum(np.vstack([item['feat'] for item in return_dict.values()]), axis=0)
+        count = sum([item['count'] for item in return_dict.values()])
+        feat_squared = np.sum(np.vstack([item['feat_squared'] for item in return_dict.values()]), axis=0)
+
+        self.feats_mean = feat / float(count)
+        self.feats_std = np.sqrt(feat_squared / float(count) - np.square(self.feats_mean))
+        np.savetxt(
+            generate_file_path(self.save_dir, self.model_name, 'feats_mean'), self.feats_mean)
+        np.savetxt(
+            generate_file_path(self.save_dir, self.model_name, 'feats_std'), self.feats_std)
+        log.info("End calculating mean and std from samples")
 
     def sample_normalize(self, k_samples=1000, overwrite=False, noise_percent=0.4):
         """ Estimate the mean and std of the features from the training set
@@ -400,12 +519,12 @@ if __name__ == "__main__":
     # #     print(r)
     # print(result)
     datagen = DataGenerator(save_dir="checkpoints", model_name="aishell", max_freq=8000)
-    # datagen.load_train_data("./resources/aishell_train.json", max_duration=16)
+    datagen.load_train_data("./resources/train.json", max_duration=16)
     # st1 = time.time()
-    # datagen.sample_normalize(k_samples=100000, noise_percent=0)
+    datagen.sample_normalize_fbank(k_samples=100, noise_percent=0)
     # log.info("time %s", time.time() - st1)
     # datagen.featurize("/Users/lonica/Downloads/output_1.wav", overwrite=True, save_feature_as_csvfile=True)
-    w = "/Users/lonica/Downloads/000020189.WAV"
-    datagen.featurize(w, overwrite=True, noise_percent=1, seq_length=500, save_feature_as_csvfile=True)
+    # w = "/Users/lonica/Downloads/000020189.WAV"
+    # datagen.featurize(w, overwrite=True, noise_percent=1, seq_length=500, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/5390-30102-0021.wav", overwrite=True, save_feature_as_csvfile=True)
     # datagen.featurize("/Users/lonica/Downloads/AISHELL-ASR0009-OS1_sample/SPEECH_DATA/S0150/S0150_mic/BAC009S0150W0498.wav", overwrite=True, save_feature_as_csvfile=True)

@@ -8,6 +8,12 @@ import soundfile
 from numpy.lib.stride_tricks import as_strided
 import random
 
+try:
+    from python_speech_features import delta
+    from python_speech_features import logfbank, fbank
+except ImportError:
+    print("import error")
+
 logger = logging.getLogger(__name__)
 
 noise_work, sr2 = soundfile.read('resources/noise_work.wav', dtype='float32')
@@ -114,8 +120,10 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
             audio = sound_file.read(dtype='float32')
             if random.random() < noise_percent and seq_length > 0:
                 audio_length = audio.shape[0]
-                max_length_ratio = min(int((float(audio_length) / (seq_length - 100) / sound_file.samplerate) * 10000), 120)
-                min_length_ratio = max(int(np.math.ceil((float(audio_length) / seq_length / sound_file.samplerate) * 10000)), 80)
+                max_length_ratio = min(int((float(audio_length) / (seq_length - 100) / sound_file.samplerate) * 10000),
+                                       120)
+                min_length_ratio = max(
+                    int(np.math.ceil((float(audio_length) / seq_length / sound_file.samplerate) * 10000)), 80)
                 speed_rate = random.randint(min_length_ratio, max_length_ratio) / 100.
                 new_length = int(audio_length / speed_rate)
                 old_indices = np.arange(audio_length)
@@ -155,3 +163,15 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
             return res
     else:
         return np.loadtxt(csvfilename)
+
+
+def fbank_from_file(wav_path, step=10, window=20, max_freq=None,
+                    eps=1e-14, overwrite=False, save_feature_as_csvfile=False,
+                    noise_percent=0.4, speed_percent=0, seq_length=-1):
+    sig1, sr1 = soundfile.read(wav_path, dtype='float32')
+    fbank_feat, energy = fbank(sig1, sr1, nfilt=40)  # (407, 40)
+    fbank_feat = np.column_stack((np.log(energy), np.log(fbank_feat)))  # (407, 41)
+    d_fbank_feat = delta(fbank_feat, 2)
+    dd_fbank_feat = delta(d_fbank_feat, 2)
+    concat_fbank_feat = np.array([fbank_feat, d_fbank_feat, dd_fbank_feat])  # (3, 407, 41)
+    return concat_fbank_feat
