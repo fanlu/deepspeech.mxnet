@@ -110,7 +110,7 @@ def load_data(args, kv=None):
         datagen.load_validation_data(val_json, max_duration=max_duration)
         if is_bi_graphemes and language == "en":
             if not os.path.isfile(
-                "resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
+                    "resources/unicodemap_en_baidu_bi_graphemes.csv") or overwrite_bi_graphemes_dictionary:
                 load_labelutil(labelUtil=labelUtil, is_bi_graphemes=False, language=language)
                 generate_bi_graphemes_dictionary(datagen.train_texts + datagen.val_texts)
         if language == "zh" and zh_type == "phone":
@@ -293,6 +293,49 @@ def load_model(args, contexts, data_train):
     return model_loaded, model_num_epoch
 
 
+def get_scorer(alpha=1., beta=1.):
+    try:
+        from swig_wrapper import Scorer
+
+        labelUtil = LabelUtil()
+        vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
+        log.info("vacab_list len is %d" % len(vocab_list))
+        _ext_scorer = Scorer(alpha, beta, args.config.get('common', 'kenlm'), vocab_list)
+        lm_char_based = _ext_scorer.is_character_based()
+        lm_max_order = _ext_scorer.get_max_order()
+        lm_dict_size = _ext_scorer.get_dict_size()
+        log.info("language model: "
+                 "is_character_based = %d," % lm_char_based +
+                 " max_order = %d," % lm_max_order +
+                 " dict_size = %d" % lm_dict_size)
+        return _ext_scorer
+    except ImportError:
+        import kenlm
+        km = kenlm.Model(args.config.get('common', 'kenlm'))
+        return km.score
+
+
+def grid_search():
+    from sklearn.model_selection import ParameterGrid
+    param_grid = [{
+        "alpha": np.linspace(0.1, 1.5, 15),
+        "beta": np.linspace(0.1, 1.5, 15)
+    }]
+    for p in ParameterGrid(param_grid):
+        yield p
+
+
+def random_search():
+    from scipy.stats.distributions import uniform
+    from sklearn.model_selection import ParameterSampler
+    param_grid = {
+        'alpha': uniform(0.1, 1.5),  # np.linspace(0.1, 1, 10), range(1, 10, 2), #
+        'beta': uniform(0.1, 1.5),  # np.linspace(0.05, 0.25, 5),[0.05], #
+    }
+    param_list = list(ParameterSampler(param_grid, n_iter=20))
+    return [dict((k, round(v, 1)) for (k, v) in d.items()) for d in param_list]
+
+
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
         raise Exception('cfg file path must be provided. ' +
@@ -396,33 +439,32 @@ if __name__ == '__main__':
                               label_shapes=data_train.provide_label)
         max_t_count = args.config.getint('arch', 'max_t_count')
 
-        try:
-            from swig_wrapper import Scorer
-
-            labelUtil = LabelUtil()
-            vocab_list = [chars.encode("utf-8") for chars in labelUtil.byList]
-            log.info("vacab_list len is %d" % len(vocab_list))
-            _ext_scorer = Scorer(0.26, 0.1, args.config.get('common', 'kenlm'), vocab_list)
-            lm_char_based = _ext_scorer.is_character_based()
-            lm_max_order = _ext_scorer.get_max_order()
-            lm_dict_size = _ext_scorer.get_dict_size()
-            log.info("language model: "
-                     "is_character_based = %d," % lm_char_based +
-                     " max_order = %d," % lm_max_order +
-                     " dict_size = %d" % lm_dict_size)
-            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, scorer=_ext_scorer)
-        except ImportError:
-            import kenlm
-
-            km = kenlm.Model(args.config.get('common', 'kenlm'))
-            eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, scorer=km.score)
+        eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu, scorer=get_scorer())
         if is_batchnorm:
             st = time.time()
-            for nbatch, data_batch in enumerate(data_train):
-                st1 = time.time()
-                model_loaded.forward(data_batch, is_train=False)
-                log.info("forward spent is %.2fs" % (time.time() - st))
-                model_loaded.update_metric(eval_metric, data_batch.label)
+            result = []
+            for p in random_search():
+                log.info("alpha %s, beta %s" % (p.get("alpha"), p.get("beta")))
+                eval_metric = EvalSTTMetric(batch_size=batch_size, num_gpu=num_gpu,
+                                            scorer=get_scorer(alpha=p.get("alpha"), beta=p.get("beta")))
+                for nbatch, data_batch in enumerate(data_train):
+                    st1 = time.time()
+                    model_loaded.forward(data_batch, is_train=False)
+                    log.info("forward spent is %.2fs" % (time.time() - st1))
+                    model_loaded.update_metric(eval_metric, data_batch.label)
+                val_cer, val_cer_beam, val_n_label, val_l_dist, val_l_dist_beam, val_ctc_loss = eval_metric.get_name_value()
+                log.info("val cer=%f (%d / %d), cer_beam=%f (%d/%d) ctc_loss=%f",
+                         val_cer, int(val_n_label - val_l_dist), val_n_label,
+                         val_cer_beam, int(val_n_label - val_l_dist_beam), val_n_label,
+                         val_ctc_loss)
+                result.append(
+                    {"val_cer": val_cer, "val_cer_beam": val_cer_beam, "alpha": p.get("alpha"), "beta": p.get("beta")})
+                data_train.reset()
+                eval_metric.reset()
+            import heapq
+            cheap = heapq.nsmallest(10, result, key=lambda s: s['val_cer_beam'])
+            for c in cheap:
+                log.info(c)
             log.info("time spent is %.2fs" % (time.time() - st))
         else:
             # model_loaded.score(eval_data=data_train, num_batch=None,

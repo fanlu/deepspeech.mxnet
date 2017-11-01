@@ -139,7 +139,7 @@ class EvalSTTMetric(STTMetric):
                 # p = pred_best(p)
                 probs = np.array(probs)
                 st = time.time()
-                beam_size = 5
+                beam_size = 20
                 results = ctc_beam_decode(self.scorer, beam_size, labelUtil.byList, probs)
                 log.info("decode by ctc_beam cost %.2f result: %s" % (time.time() - st, "\n".join(results)))
 
