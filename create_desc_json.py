@@ -458,12 +458,12 @@ def xiaoshuo_2_word():
 def aia_2_word(DIR):
     scp = [i for i in glob.glob(DIR + "/*/*.scp") if "noise" not in i]
     dir_name = DIR.rsplit("/", 1)[1]
-    out_file = open(_data_path + 'fanlu/' + dir_name + '.json', 'w')
+    out_file = codecs.open(_data_path + 'fanlu/' + dir_name + '.json', 'w', encoding="utf-8")
     d = set()
     e = set()
     for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
         d.add(line.rsplit(",", 1)[0])
-    out_file2 = open(_data_path + 'fanlu/' + dir_name + '.miss.json', 'w')
+    out_file2 = codecs.open(_data_path + 'fanlu/' + dir_name + '.miss.json', 'w', encoding="utf-8")
     for j in scp:
         for m, line in enumerate(open(j).readlines()):
             # print(line)
@@ -482,7 +482,7 @@ def aia_2_word(DIR):
             if len(ps) == 0:
                 continue
             line = "{\"key\":\"" + path.replace("fanlu", "aiplatform") + "\", \"duration\": " + str(
-                duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
+                duration) + ", \"text\":\"" + " ".join([p.decode("utf-8") for p in ps]) + "\"}"
             flag = False
             for p in ps:
                 if p not in d:
