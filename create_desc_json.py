@@ -59,8 +59,13 @@ special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xe
                     '\xe9\xa8\xb7': '骚', '\xe5\xa9\xac': '淫', '\xe9\x99\xbd': '阳', '\xe9\x99\xb0': '阴',
                     '\xe6\xa7\x8d': '枪', '\xe4\xbe\x86': '来', '\xe5\xa6\xb3': "你", '\xe3\x80\x87': '零',
                     '\xe6\xb2\x92': '没', '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出',
-                    '\xe6\xac\xb8': '诶', '\xe5\x94\xbb': '啦'
+                    '\xe6\xac\xb8': '诶', '\xe5\x94\xbb': '啦', '\xe5\xab\xb0': '嫩', '\xe5\xbb\x8b': '瘦',
+                    '\xe8\x82\x8f': '操',
                     }
+
+english_word = {'QQ', 'MSN', 'BBS', 'IPHONE', 'CF', 'DNF', 'MP3', 'MP4', 'MP5', 'NBA', 'VC', 'PVP', 'APM', 'QOP',
+                'DJ', 'KFC', 'VIP', 'MC', 'SM',  'MP', 'XP', 'CPU', 'GPU', 'IPS', 'BB'
+                'OK', 'WC', 'YY', 'TI', 'IT', 'KTV', 'FBI', 'TXT', 'AA', 'MM', 'JJ', 'PSP', 'ID', 'VOA'}
 
 
 def deletePunc(mystr):
@@ -656,8 +661,24 @@ if __name__ == '__main__':
     # trans(args.data_dir)
     # trans_wave(args.data_dir)
 
-    aia_2_word(args.data_dir)
-
+    # aia_2_word(args.data_dir)
+    dir_name = args.data_dir.rsplit("/", 1)[1]
+    f = open(_data_path + "fanlu/" + dir_name + ".miss.json")
+    f2 = open(_data_path + "fanlu/" + dir_name + ".json", 'a')
+    f3 = open(_data_path + "fanlu/" + dir_name + "miss2.json", 'w')
+    for i, j in enumerate(f.readlines()):
+        d = json.loads(j.strip())
+        text = d.get("text").encode('utf-8')
+        ps = generate_zi_label(text)
+        if ps:
+            line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + d.get("duration")\
+                   + ", \"text\":\"" + " ".join(ps) + "\"}"
+            f2.write(line + "\n")
+        else:
+            f3.write(j)
+    f2.close()
+    f.close()
+    f3.close()
     # deal_wave()
 
     # search_2_word()

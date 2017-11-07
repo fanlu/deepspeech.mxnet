@@ -56,15 +56,22 @@ def generate_py_dictionary(label_list):
 
 
 def generate_zi_label(label):
+    from create_desc_json import english_word
     try:
         str_ = label.strip().decode('utf-8')
     except:
         str_ = label.strip()
-    l = [i[0].encode('utf-8') if i[0] else i[1].encode('utf-8') for i in re.findall(ur'(\w+)|([\u4e00-\u9fa5])', str_)]
-    # for ch in str_:
-    #     if ch != u' ':
-    #         l.append(ch.encode('utf-8'))
-    return l
+    ret = []
+    for i in re.findall(ur'(\w+)|([\u4e00-\u9fa5])', str_):
+        if i[0]:
+            if i[0].upper() in english_word:
+                ret += [j for j in i[0].upper()]
+            else:
+                return []
+        else:
+            ret.append(i[1].encode('utf-8'))
+
+    return ret
 
 
 def dedupe(items):
