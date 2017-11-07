@@ -59,6 +59,7 @@ special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xe
                     '\xe9\xa8\xb7': '骚', '\xe5\xa9\xac': '淫', '\xe9\x99\xbd': '阳', '\xe9\x99\xb0': '阴',
                     '\xe6\xa7\x8d': '枪', '\xe4\xbe\x86': '来', '\xe5\xa6\xb3': "你", '\xe3\x80\x87': '零',
                     '\xe6\xb2\x92': '没', '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出',
+                    '\xe6\xac\xb8': '诶', '\xe5\x94\xbb': '啦'
                     }
 
 
@@ -447,6 +448,7 @@ def aia_2_word(DIR):
     dir_name = DIR.rsplit("/", 1)[1]
     out_file = open(_data_path + 'fanlu/' + dir_name + '.json', 'w')
     d = set()
+    e = set()
     for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
         d.add(line.rsplit(",", 1)[0])
     for j in scp:
@@ -478,6 +480,11 @@ def aia_2_word(DIR):
                 duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             out_file.write(line + "\n")
     out_file.close()
+    out_file1 = open(_data_path + 'fanlu/' + dir_name + '.miss', 'w')
+    for i in e:
+        out_file1.write(i + "\n")
+    out_file1.close()
+
 
 
 def check_biaozhu():
@@ -644,11 +651,9 @@ if __name__ == '__main__':
     # print(time.time()-st1)
 
     # trans(args.data_dir)
-    trans_wave(args.data_dir)
+    # trans_wave(args.data_dir)
 
-    # aia_2_word(args.data_dir)
-
-    # aia_2_word(args.data_dir)
+    aia_2_word(args.data_dir)
 
     # deal_wave()
 
