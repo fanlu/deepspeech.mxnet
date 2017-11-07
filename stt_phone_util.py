@@ -2,7 +2,7 @@
 import csv
 from collections import Counter
 from collections import OrderedDict
-
+import re
 _data_path = "./resources/"
 
 
@@ -60,10 +60,10 @@ def generate_zi_label(label):
         str_ = label.strip().decode('utf-8')
     except:
         str_ = label.strip()
-    l = []
-    for ch in str_:
-        if ch != u' ':
-            l.append(ch.encode('utf-8'))
+    l = [i[0].encode('utf-8') if i[0] else i[1].encode('utf-8') for i in re.findall(ur'(\w+)|([\u4e00-\u9fa5])', str_)]
+    # for ch in str_:
+    #     if ch != u' ':
+    #         l.append(ch.encode('utf-8'))
     return l
 
 

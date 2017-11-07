@@ -460,6 +460,7 @@ def aia_2_word(DIR):
                 continue
             duration = get_duration_wave(path)
             if duration > 16:
+                print("%s longer than 16s" % path)
                 continue
             txt = strQ2B(txt.strip().decode("utf8")).encode("utf8")
             ps = generate_zi_label(deletePunc(txt))
@@ -538,10 +539,12 @@ def trans(DIR):
             except Exception as exc:
                 print('%r generated an exception: %s' % (f, exc))
 
+
 def wav_16_2_8(wav):
     b = AudioSegment.from_wav(wav)
     b.set_frame_rate(8000).export(wav.replace("fanlu", "fanlu/8k"), format="wav")
     return "success"
+
 
 def trans_wave(DIR):
     audio_paths = glob.glob(DIR + "/*/*/*.WAV")
@@ -556,6 +559,7 @@ def trans_wave(DIR):
             except Exception as exc:
                 print('%r generated an exception: %s' % (f, exc))
 
+
 def deal_1():
     f = open("/export/aiplatform/fanlu/aishell_thchs30_gg_sc.json").readlines()
     f2 = open("/export/aiplatform/fanlu/aishell_thchs30_gg_sc2.json", "w")
@@ -563,7 +567,7 @@ def deal_1():
         d = json.loads(line.strip())
         du = d.get("duration", 0)
         if du < 1:
-	    print(line.strip())
+            print(line.strip())
             continue
         f2.write(line)
     f2.close()
@@ -600,7 +604,7 @@ def deal_wave():
                     break
             if flag:
                 continue
-            wav = wav_path + "SESSION0/" +  wav_name + ".WAV"
+            wav = wav_path + "SESSION0/" + wav_name + ".WAV"
             if not os.path.exists(wav):
                 print("%s not exist" % wav)
                 continue
