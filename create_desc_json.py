@@ -65,7 +65,7 @@ special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xe
                     '\xe5\xba\x85': '么'
                     }
 
-english_word = {'QQ', 'MSN', 'BBS', 'IPHONE', 'CF', 'DNF', 'MP3', 'MP4', 'MP5', 'NBA', 'VC', 'PVP', 'APM', 'QOP', 'CS',
+english_word = {'QQ', 'MSN', 'BBS', 'CF', 'DNF', 'MP3', 'MP4', 'MP5', 'NBA', 'VC', 'PVP', 'APM', 'QOP', 'CS',
                 'CK', 'ISP', 'EMS', '4S', '5S', '6S', 'MX', 'IPA',
                 'DJ', 'XP', 'CPU', 'GPU', 'IPS', 'BB', 'PS', 'IBM', 'VPN', 'JPG', 'IP', 'PK', 'UC', 'DVD', 'CD', 'PPT',
                 'MV', 'TV', 'TCL', 'VB', 'PPS', 'HTC', 'PC', 'AMD', 'LED', 'LG', 'CPI',
