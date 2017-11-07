@@ -486,6 +486,7 @@ def aia_2_word(DIR):
             flag = False
             for p in ps:
                 if p not in d:
+                    e.add(p)
                     print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
                     flag = True
                     break
