@@ -67,7 +67,7 @@ def generate_zi_label(label):
             if i[0].upper() in english_word:
                 ret += [j for j in i[0].upper()]
             else:
-                return []
+                ret.append(i[0])
         else:
             ret.append(i[1].encode('utf-8'))
 
