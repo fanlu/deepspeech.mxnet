@@ -451,6 +451,7 @@ def aia_2_word(DIR):
     e = set()
     for i, line in enumerate(open("resources/unicodemap_zi.csv").readlines()):
         d.add(line.rsplit(",", 1)[0])
+    out_file2 = open(_data_path + 'fanlu/' + dir_name + '.miss.json', 'w')
     for j in scp:
         for m, line in enumerate(open(j).readlines()):
             # print(line)
@@ -468,18 +469,20 @@ def aia_2_word(DIR):
             ps = generate_zi_label(deletePunc(txt))
             if len(ps) == 0:
                 continue
+            line = "{\"key\":\"" + path.replace("fanlu", "aiplatform") + "\", \"duration\": " + str(
+                duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
             flag = False
             for p in ps:
-                if p not in d or p.isdigit():
+                if p not in d:
                     print("not in d is %s %s. %s" % (p, [p], "".join(ps)))
                     flag = True
                     break
             if flag:
-                continue
-            line = "{\"key\":\"" + path.replace("fanlu", "aiplatform") + "\", \"duration\": " + str(
-                duration) + ", \"text\":\"" + " ".join(ps) + "\"}"
-            out_file.write(line + "\n")
+                out_file2.write(line + "\n")
+            else:
+                out_file.write(line + "\n")
     out_file.close()
+    out_file2.close()
     out_file1 = open(_data_path + 'fanlu/' + dir_name + '.miss', 'w')
     for i in e:
         out_file1.write(i + "\n")
