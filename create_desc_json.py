@@ -1,4 +1,4 @@
-# -- coding: utf-8 --
+# -*- coding: utf-8 -*-
 """
 Use this script to create JSON-Line description files that can be used to
 train deep-speech models through this library.
@@ -671,7 +671,7 @@ if __name__ == '__main__':
         text = d.get("text").encode('utf-8')
         ps = generate_zi_label(text)
         if ps:
-            line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + d.get("duration")\
+            line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + str(d.get("duration"))\
                    + ", \"text\":\"" + " ".join(ps) + "\"}"
             f2.write(line + "\n")
         else:

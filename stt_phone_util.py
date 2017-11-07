@@ -1,4 +1,4 @@
-# encoding=utf-8
+# -*- coding: utf-8 -*-
 import csv
 from collections import Counter
 from collections import OrderedDict
