@@ -61,7 +61,8 @@ special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xe
                     '\xe6\xa7\x8d': '枪', '\xe4\xbe\x86': '来', '\xe5\xa6\xb3': "你", '\xe3\x80\x87': '零',
                     '\xe6\xb2\x92': '没', '\xe4\xba\x8a': '事', '\xe6\x95\x8e': '教', '\xe5\xb2\x80': '出',
                     '\xe6\xac\xb8': '诶', '\xe5\x94\xbb': '啦', '\xe5\xab\xb0': '嫩', '\xe5\xbb\x8b': '瘦',
-                    '\xe8\x82\x8f': '操',
+                    '\xe8\x82\x8f': '操', '\xe9\xba\xbc': '么', '\xe5\x91\x90': '啊', '\xe8\xa3\x8f': '里',
+                    '\xe5\xba\x85': '么'
                     }
 
 english_word = {'QQ', 'MSN', 'BBS', 'IPHONE', 'CF', 'DNF', 'MP3', 'MP4', 'MP5', 'NBA', 'VC', 'PVP', 'APM', 'QOP', 'CS',
