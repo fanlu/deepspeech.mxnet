@@ -29,6 +29,7 @@ from stt_phone_util import generate_zi_label, strQ2B
 from sentence2phoneme import sentence2phoneme, loadmap
 from stt_metric import levenshtein_distance
 import thulac
+import codecs
 
 _data_path = "/Users/lonica/Downloads/"
 # _data_path = "/export/fanlu/aishell/"
@@ -63,9 +64,15 @@ special_2_normal = {'\xe3\x80\x80': "", '\xee\x80\x84': "", '\xc2\xa0': "", '\xe
                     '\xe8\x82\x8f': '操',
                     }
 
-english_word = {'QQ', 'MSN', 'BBS', 'IPHONE', 'CF', 'DNF', 'MP3', 'MP4', 'MP5', 'NBA', 'VC', 'PVP', 'APM', 'QOP',
-                'DJ', 'KFC', 'VIP', 'MC', 'SM',  'MP', 'XP', 'CPU', 'GPU', 'IPS', 'BB'
-                'OK', 'WC', 'YY', 'TI', 'IT', 'KTV', 'FBI', 'TXT', 'AA', 'MM', 'JJ', 'PSP', 'ID', 'VOA'}
+english_word = {'QQ', 'MSN', 'BBS', 'IPHONE', 'CF', 'DNF', 'MP3', 'MP4', 'MP5', 'NBA', 'VC', 'PVP', 'APM', 'QOP', 'CS',
+                'CK',
+                'DJ', 'XP', 'CPU', 'GPU', 'IPS', 'BB', 'PS', 'IBM', 'VPN', 'JPG', 'IP', 'PK', 'UC', 'DVD', 'CD', 'PPT',
+                'MV', 'TV', 'TCL', 'VB', 'PPS', 'HTC', 'PC', 'AMD', 'LED', 'LG', 'CPI',
+                'OK', 'WC', 'YY', 'TI', 'IT', 'KTV', 'FBI', 'TXT', 'AA', 'MM', 'PSP', 'ID', 'VOA', 'ATM',
+                'KFC', 'VIP', 'MC', 'SM', 'MP', 'DQ', 'UFO', 'GBA', 'MBA', 'FTP', 'BP', 'CEO', 'CTO', 'CXO', 'CMO',
+                'CFO',
+                'SUV', 'GTI',
+                'TM', 'PP', 'JJ', 'JB', 'AV', }
 
 
 def deletePunc(mystr):
@@ -494,7 +501,6 @@ def aia_2_word(DIR):
     out_file1.close()
 
 
-
 def check_biaozhu():
     f = _data_path + "bdp1.txt"
     import json
@@ -664,15 +670,18 @@ if __name__ == '__main__':
     # aia_2_word(args.data_dir)
     dir_name = args.data_dir.rsplit("/", 1)[1]
     f = open(_data_path + "fanlu/" + dir_name + ".miss.json")
-    f2 = open(_data_path + "fanlu/" + dir_name + ".json", 'a')
+    f2 = codecs.open(_data_path + "fanlu/" + dir_name + ".json", 'w', encoding="utf-8")
     f3 = open(_data_path + "fanlu/" + dir_name + "miss2.json", 'w')
     for i, j in enumerate(f.readlines()):
-        d = json.loads(j.strip())
-        text = d.get("text").encode('utf-8')
+        d = json.loads(j.strip(), encoding="utf-8")
+        text = d.get("text")
         ps = generate_zi_label(text)
         if ps:
-            line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + str(d.get("duration"))\
-                   + ", \"text\":\"" + " ".join(ps) + "\"}"
+            # line = "{\"key\":\"" + d.get("key") + "\", \"duration\": " + str(d.get("duration"))\
+            #        + ", \"text\":\"" + " ".join(ps) + "\"}"
+            # c = {"key": d.get("key"), "duration": str(d.get("duration")), "text": " ".join([m.decode("utf-8") for m in ps])}
+            line = '{"key": "%s", "duration": %s, "text": "%s"}' % (
+                d.get("key"), d.get("duration"), " ".join([i.decode("utf-8") for i in ps]))
             f2.write(line + "\n")
         else:
             f3.write(j)
