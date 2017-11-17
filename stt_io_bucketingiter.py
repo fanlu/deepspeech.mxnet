@@ -259,6 +259,7 @@ class BucketPrefetchingIter(mx.io.DataIter):
         self.started = True
         self.current_batch = [None for i in range(self.n_iter)]
         self.next_batch = [None for i in range(self.n_iter)]
+        self.default_bucket_key = self.iters[0].default_bucket_key
 
         def prefetch_func(self, i):
             """Thread entry"""
