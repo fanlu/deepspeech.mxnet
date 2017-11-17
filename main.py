@@ -14,7 +14,7 @@ from log_util import LogUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_dictionary
 from stt_bucketing_module import STTBucketingModule
 from stt_datagenerator import DataGenerator
-from stt_io_bucketingiter import BucketSTTIter
+from stt_io_bucketingiter import BucketSTTIter, BucketPrefetchingIter
 from stt_io_iter import STTIter
 from stt_metric import EvalSTTMetric
 from stt_phone_util import generate_phone_dictionary, generate_word_dictionary, generate_py_dictionary
@@ -211,6 +211,8 @@ def load_data(args, kv=None):
                               is_bi_graphemes=is_bi_graphemes,
                               save_feature_as_csvfile=save_feature_as_csvfile)
 
+    data_loaded = BucketPrefetchingIter(data_loaded)
+
     if mode == 'train' or mode == 'load':
         if is_bucketing:
             init_states = prepare_data_template.prepare_data(args, is_val=True)
@@ -247,6 +249,7 @@ def load_data(args, kv=None):
                                         sort_by_duration=False,
                                         is_bi_graphemes=is_bi_graphemes,
                                         save_feature_as_csvfile=save_feature_as_csvfile)
+        validation_loaded = BucketPrefetchingIter(validation_loaded)
         return data_loaded, validation_loaded, args
     elif mode == 'predict':
         return data_loaded, args

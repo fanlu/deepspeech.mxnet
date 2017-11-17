@@ -9,6 +9,7 @@ sys.path.insert(0, "../../python")
 import bisect
 import socket
 import numpy as np
+import threading
 
 BATCH_SIZE = 1
 SEQ_LENGTH = 0
@@ -113,7 +114,7 @@ class BucketSTTIter(mx.io.DataIter):
         # self.part_index = 2
         for index_buck, buck in enumerate(self.data):
             self.data[index_buck] = [d for index_d, d in enumerate(
-                self.data[index_buck][:len(self.data[index_buck]) / self.num_parts * self.num_parts]) if
+                self.data[index_buck][:len(self.data[index_buck]) // self.num_parts * self.num_parts]) if
                                      index_d % self.num_parts == self.part_index]
             log.info("partition: %s, num_works: %d, part_index: %d %d's data size is %d " %
                      (partition, self.num_parts, self.part_index, index_buck, len(self.data[index_buck])))
@@ -210,3 +211,151 @@ class BucketSTTIter(mx.io.DataIter):
                                bucket_key=self.buckets[i],
                                provide_data=provide_data,
                                provide_label=self.provide_label)
+
+
+class BucketPrefetchingIter(mx.io.DataIter):
+    """Performs pre-fetch for other data iterators.
+
+    This iterator will create another thread to perform ``iter_next`` and then
+    store the data in memory. It potentially accelerates the data read, at the
+    cost of more memory usage.
+
+    Parameters
+    ----------
+    iters : DataIter or list of DataIter
+        The data iterators to be pre-fetched.
+    rename_data : None or list of dict
+        The *i*-th element is a renaming map for the *i*-th iter, in the form of
+        {'original_name' : 'new_name'}. Should have one entry for each entry
+        in iter[i].provide_data.
+    rename_label : None or list of dict
+        Similar to ``rename_data``.
+
+    Examples
+    --------
+    >>> iter1 = mx.io.NDArrayIter({'data':mx.nd.ones((100,10))}, batch_size=25)
+    >>> iter2 = mx.io.NDArrayIter({'data':mx.nd.ones((100,10))}, batch_size=25)
+    >>> piter = mx.io.PrefetchingIter([iter1, iter2],
+    ...                               rename_data=[{'data': 'data_1'}, {'data': 'data_2'}])
+    >>> print(piter.provide_data)
+    [DataDesc[data_1,(25, 10L),<type 'numpy.float32'>,NCHW],
+     DataDesc[data_2,(25, 10L),<type 'numpy.float32'>,NCHW]]
+    """
+
+    def __init__(self, iters, rename_data=None, rename_label=None):
+        super(BucketPrefetchingIter, self).__init__()
+        if not isinstance(iters, list):
+            iters = [iters]
+        self.n_iter = len(iters)
+        assert self.n_iter > 0
+        self.iters = iters
+        self.rename_data = rename_data
+        self.rename_label = rename_label
+        self.batch_size = self.provide_data[0][1][0]
+        self.data_ready = [threading.Event() for i in range(self.n_iter)]
+        self.data_taken = [threading.Event() for i in range(self.n_iter)]
+        for i in self.data_taken:
+            i.set()
+        self.started = True
+        self.current_batch = [None for i in range(self.n_iter)]
+        self.next_batch = [None for i in range(self.n_iter)]
+
+        def prefetch_func(self, i):
+            """Thread entry"""
+            while True:
+                self.data_taken[i].wait()
+                if not self.started:
+                    break
+                try:
+                    self.next_batch[i] = self.iters[i].next()
+                except StopIteration:
+                    self.next_batch[i] = None
+                self.data_taken[i].clear()
+                self.data_ready[i].set()
+
+        self.prefetch_threads = [threading.Thread(target=prefetch_func, args=[self, i]) \
+                                 for i in range(self.n_iter)]
+        for thread in self.prefetch_threads:
+            thread.setDaemon(True)
+            thread.start()
+
+    def __del__(self):
+        self.started = False
+        for i in self.data_taken:
+            i.set()
+        for thread in self.prefetch_threads:
+            thread.join()
+
+    @property
+    def provide_data(self):
+        if self.rename_data is None:
+            return sum([i.provide_data for i in self.iters], [])
+        else:
+            return sum([[
+                mx.io.DataDesc(r[x.name], x.shape, x.dtype)
+                if isinstance(x, mx.io.DataDesc) else mx.io.DataDesc(*x)
+                for x in i.provide_data
+            ] for r, i in zip(self.rename_data, self.iters)], [])
+
+    @property
+    def provide_label(self):
+        if self.rename_label is None:
+            return sum([i.provide_label for i in self.iters], [])
+        else:
+            return sum([[
+                mx.io.DataDesc(r[x.name], x.shape, x.dtype)
+                if isinstance(x, mx.io.DataDesc) else mx.io.DataDesc(*x)
+                for x in i.provide_label
+            ] for r, i in zip(self.rename_label, self.iters)], [])
+
+    def reset(self):
+        for i in self.data_ready:
+            i.wait()
+        for i in self.iters:
+            i.reset()
+        for i in self.data_ready:
+            i.clear()
+        for i in self.data_taken:
+            i.set()
+
+    def iter_next(self):
+        for i in self.data_ready:
+            i.wait()
+        if self.next_batch[0] is None:
+            for i in self.next_batch:
+                assert i is None, "Number of entry mismatches between iterators"
+            return False
+        else:
+            for batch in self.next_batch:
+                assert batch.pad == self.next_batch[0].pad, \
+                    "Number of entry mismatches between iterators"
+            self.current_batch = mx.io.DataBatch(sum([batch.data for batch in self.next_batch], []),
+                                                 sum([batch.label for batch in self.next_batch], []),
+                                                 self.next_batch[0].pad,
+                                                 self.next_batch[0].index,
+                                                 bucket_key=self.next_batch[0].bucket_key,
+                                                 provide_data=self.next_batch[0].provide_data,
+                                                 provide_label=self.next_batch[0].provide_label)
+            for i in self.data_ready:
+                i.clear()
+            for i in self.data_taken:
+                i.set()
+            return True
+
+    def next(self):
+        if self.iter_next():
+            return self.current_batch
+        else:
+            raise StopIteration
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
