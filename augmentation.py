@@ -165,35 +165,81 @@ if __name__ == "__main__":
     print(path, name)
     # for p in random_search():
     #   print(p)
+    import concurrent.futures
+    from multiprocessing import cpu_count
 
     noise_work, sr2 = sf.read('/Users/lonica/Downloads/noise_work.wav', dtype='float32')
     # noise_work, sr2 = librosa.load('/Users/lonica/Downloads/noise_work.wav')
     st = time.time()
-    for w in wavs[300:305]:
+    result = []
+    from data_utils.audio import AudioSegment
+    for w in wavs[600:605]:
         path, name = w.rsplit('/', 1)
-        outputfile = path + '/' + name.split('.')[0] + "-" + str(1) + "-" + 'work.wav'
-        # aug(w, '/Users/lonica/Downloads/noise_work.wav', outputfile, 3, 1)
-
-        audio, sr1 = sf.read(w, dtype='float32')
-        max_length = int(math.ceil(audio.shape[0] / float(sr1)) * sr1)
-        # audio, sr1 = librosa.load(w)
-        bg = np.zeros((max_length,))
-        rand_start = random.randint(1, max_length - audio.shape[0] - 1)
-        bg[rand_start:rand_start + audio.shape[0]] = audio
-        audio = bg
-        start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
-        result_a = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
-
-        # it's very slowly 100/5.48s
-        # result_a = librosa.effects.time_stretch(result_a, random.randint(8, 12) / float(10.))
-
-        # librosa.output.write_wav(outputfile, result_a, sr1)
+        speed = random.randint(12,12)/10.
+        outputfile = path + '/' + name.split('.')[0] + "-" + str(speed) + "-" + 'work.wav'
+        # audio = AudioSegment.from_file(w)
+        # audio.change_speed(speed)
+        # audio.to_wav_file(outputfile)
         #
-        sf.write(outputfile, result_a, sr1)
+        # outputfile1 = path + '/' + name.split('.')[0] + "-" + str(speed) + "-" + 'work1.wav'
+        # audio, sr1 = sf.read(w, dtype='float32')
+        # result_a = librosa.effects.time_stretch(audio, speed)
+        # librosa.output.write_wav(outputfile1, result_a, sr1)
+        noise_percent = 1
+        seq_length = 600
+        audio, sr1 = sf.read(w, dtype='float32')
+        if random.random() < noise_percent and seq_length > 0:
+            temp_audio = AudioSegment(audio, sr1)
+            audio_length = audio.shape[0]
+            max_length_ratio = int((float(audio_length) / (seq_length - 100) / sr1) * 10000)
+            min_length_ratio = int(np.math.ceil((float(audio_length) / seq_length / sr1) * 10000))
+            temp_audio.change_speed(random.randint(min_length_ratio, max_length_ratio) / 100.)
+            audio = temp_audio.samples
+        if random.random() < noise_percent:
+            if seq_length != -1:
+                max_length = seq_length * sr1 / 100
+                if audio.shape[0] < max_length:
+                    bg = np.zeros((max_length,))
+                    rand_start = random.randint(0, max_length - audio.shape[0])
+                    bg[rand_start:rand_start + audio.shape[0]] = audio
+                    audio = bg
+            start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
+            audio = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
+        sf.write(outputfile, audio, sr1)
+    # for w in wavs[300:400]:
+    #     path, name = w.rsplit('/', 1)
+    #     outputfile = path + '/' + name.split('.')[0] + "-" + str(1) + "-" + 'work.wav'
+    #     # aug(w, '/Users/lonica/Downloads/noise_work.wav', outputfile, 3, 1)
+    #
+    #     audio, sr1 = sf.read(w, dtype='float32')
+    #     max_length = int(math.ceil(audio.shape[0] / float(sr1)) * sr1)+100
+    #     # audio, sr1 = librosa.load(w)
+    #     bg = np.zeros((max_length,))
+    #     rand_start = random.randint(1, max_length - audio.shape[0] - 1)
+    #     bg[rand_start:rand_start + audio.shape[0]] = audio
+    #     audio = bg
+    #     start = random.randint(1, noise_work.shape[0] - audio.shape[0] - 1)
+    #     result_a = audio + random.randint(150, 250) / float(100.) * noise_work[start: audio.shape[0] + start]
+    #     result.append(result_a)
+    #     # it's very slowly 100/5.48s
+    #     # result_a = librosa.effects.time_stretch(result_a, random.randint(8, 12) / float(10.))
+    #
+    #     # librosa.output.write_wav(outputfile, result_a, sr1)
+    #     #
+    #     sf.write(outputfile, result_a, sr1)
     st1 = time.time() - st
     print("time spent is %.2f" % st1)
-
-
+    # st2 = time.time()
+    # with concurrent.futures.ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+    #     future_to_f = {executor.submit(librosa.effects.time_stretch, f, random.randint(8, 12) / float(10.)): f for f in result}
+    #     for future in concurrent.futures.as_completed(future_to_f):
+    #         f = future_to_f[future]
+    #         try:
+    #             data = future.result()
+    #         except Exception as exc:
+    #             print('%r generated an exception: %s' % (f, exc))
+    #
+    # print("time spent is %.2f" % (time.time() - st2))
     #
     # _, wav_file = wav.read(w)
     # w_f = np.array(wav_file).astype(np.float32)

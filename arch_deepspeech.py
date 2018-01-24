@@ -185,7 +185,7 @@ def arch(args, seq_len=None):
                 fc_seq.append(hidden)
             net = mx.sym.Concat(*fc_seq, dim=0, name="warpctc_layer_concat")
             if mode == 'server':
-                sm = mx.sym.SoftmaxOutput(data=net, name='softmax')
+                sm = mx.sym.SoftmaxActivation(data=net, name='softmax')
                 output = [sm]
                 for state in b_states + f_states:
                     output.append(state.c)

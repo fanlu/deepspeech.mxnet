@@ -39,7 +39,7 @@ class LogUtil(Singleton):
 
             file_handler = logging.handlers.RotatingFileHandler(filename=self._filename,
                                                                 maxBytes=file_max_bytes,
-                                                                backupCount=10)
+                                                                backupCount=10, encoding='utf-8')
             file_formatter = logging.Formatter('[%(levelname)8s][%(asctime)s.%(msecs)03d] %(message)s',
                                                datefmt='%Y/%m/%d %H:%M:%S')
             file_handler.setFormatter(file_formatter)

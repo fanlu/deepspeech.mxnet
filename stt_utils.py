@@ -8,11 +8,8 @@ import soundfile
 from numpy.lib.stride_tricks import as_strided
 import random
 
-try:
-    from python_speech_features import delta
-    from python_speech_features import logfbank, fbank
-except ImportError:
-    print("import error")
+from python_speech_features import delta
+from python_speech_features import logfbank, fbank
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +110,7 @@ def spectrogram_from_file(filename, step=10, window=20, max_freq=None,
         eps (float): Small value to ensure numerical stability (for ln(x))
     """
 
-    filename = filename.encode("utf-8")
+    # filename = filename.encode("utf-8")
     csvfilename = filename[:-3] + "csv"
     if (os.path.isfile(csvfilename) is False) or overwrite:
         with soundfile.SoundFile(filename) as sound_file:

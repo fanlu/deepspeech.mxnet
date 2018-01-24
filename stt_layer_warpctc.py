@@ -21,3 +21,18 @@ def warpctc_layer(net, label, num_label, seq_len, character_classes_count):
                          name="warpctc_layer_warpctc")
 
     return net
+
+    # # pred_fc = mx.sym.FullyConnected(data=net, num_hidden=11)
+    # pred_ctc = mx.sym.Reshape(data=net, shape=(-4, seq_len, -1, 0))
+    #
+    # # _contrib_CTCLoss
+    # loss = mx.sym.contrib.ctc_loss(data=pred_ctc, label=label, name='ctc_loss')
+    # ctc_loss = mx.sym.MakeLoss(loss)
+    #
+    # softmax_class = mx.symbol.SoftmaxActivation(data=net)
+    # softmax_loss = mx.sym.MakeLoss(softmax_class)
+    # softmax_loss = mx.sym.BlockGrad(softmax_loss)
+    #
+    # return mx.sym.Group([softmax_loss, ctc_loss])
+
+    # return ctc_loss

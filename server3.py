@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import BaseHTTPServer
 import bisect
 import cgi
 import json
 import os
 import sys
 import time
+from BaseHTTPServer import HTTPServer
 from datetime import datetime
 
 import mxnet as mx
 import numpy as np
-import subprocess
+
 from config_util import parse_args, parse_contexts, generate_file_path
-from ctc_beam_search_decoder import ctc_beam_search_decoder_log
 from label_util import LabelUtil
 from log_util import LogUtil
 from main import load_labelutil
 from stt_datagenerator import DataGenerator
-from stt_metric import ctc_greedy_decode
+from stt_metric import EvalSTTMetric
 from stt_utils import spectrogram_from_file
 
 # os.environ['MXNET_ENGINE_TYPE'] = "NaiveEngine"
@@ -46,7 +46,7 @@ class ConfigLogger(object):
         self.__log.info(line)
 
 
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     # Simple HTTP request handler with POST commands.
 
     def do_POST(self):
@@ -59,8 +59,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                      'CONTENT_TYPE': self.headers['Content-Type'],
                      })
         filename = form['file'].filename
-        log.info("filename is: " + str(filename))
-        output_file_pre = args.config.get("common", "wav_dir")
+        print("filename is: " + str(filename))
+        output_file_pre = "/Users/lonica/Downloads/wav/"
         part1, part2 = filename.rsplit(".", 1)
         if filename.endswith(".speex"):
             data = form['file'].file.read()
@@ -73,10 +73,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         elif filename.endswith(".amr"):
             data = form['file'].file.read()
             open(output_file_pre + filename, "wb").write(data)
-            subprocess.call(
-                ["ffmpeg", "-y", "-i", output_file_pre + part1 + ".amr", "-acodec", "pcm_s16le", "-ar", "16000", "-ac",
-                 "1", output_file_pre + part1 + ".wav"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, shell=False)
+            command = "ffmpeg -y -i " + output_file_pre + part1 + ".amr -acodec pcm_s16le -ar 16000 -ac 1 -b 256 " + output_file_pre + part1 + ".wav"
+            os.system(command)
 
         elif filename.lower().endswith(".wav"):
             data = form['file'].file
@@ -116,23 +114,29 @@ def load_model(args):
 
 
 class Net(object):
-    def __init__(self, args):
-        self.args = args
+    def __init__(self):
+        if len(sys.argv) <= 1:
+            raise Exception('cfg file path must be provided. ' +
+                            'ex)python main.py --configfile examplecfg.cfg')
+        self.args = parse_args(sys.argv[1])
+        # set parameters from cfg file
+        # give random seed
+        self.random_seed = self.args.config.getint('common', 'random_seed')
+        self.mx_random_seed = self.args.config.getint('common', 'mx_random_seed')
+        # random seed for shuffling data list
+        if self.random_seed != -1:
+            np.random.seed(self.random_seed)
+        # set mx.random.seed to give seed for parameter initialization
+        if self.mx_random_seed != -1:
+            mx.random.seed(self.mx_random_seed)
+        else:
+            mx.random.seed(hash(datetime.now()))
+        # set log file name
+        self.log_filename = self.args.config.get('common', 'log_filename')
+        self.log = LogUtil(filename=self.log_filename).getlogger()
+
         # set parameters from data section(common)
         self.mode = self.args.config.get('common', 'mode')
-
-        # get meta file where character to number conversions are defined
-
-        self.contexts = parse_contexts(self.args)
-        self.num_gpu = len(self.contexts)
-        self.batch_size = self.args.config.getint('common', 'batch_size')
-        # check the number of gpus is positive divisor of the batch size for data parallel
-        self.is_batchnorm = self.args.config.getboolean('arch', 'is_batchnorm')
-        self.is_bucketing = self.args.config.getboolean('arch', 'is_bucketing')
-
-        # log current config
-        self.config_logger = ConfigLogger(log)
-        self.config_logger(args.config)
 
         save_dir = 'checkpoints'
         model_name = self.args.config.get('common', 'prefix')
@@ -144,9 +148,22 @@ class Net(object):
 
         self.buckets = json.loads(self.args.config.get('arch', 'buckets'))
 
-        default_bucket_key = self.buckets[-1]
+        # get meta file where character to number conversions are defined
+
+        self.contexts = parse_contexts(self.args)
+        self.num_gpu = len(self.contexts)
+        self.batch_size = self.args.config.getint('common', 'batch_size')
+        # check the number of gpus is positive divisor of the batch size for data parallel
+        self.is_batchnorm = self.args.config.getboolean('arch', 'is_batchnorm')
+        self.is_bucketing = self.args.config.getboolean('arch', 'is_bucketing')
+
+        # log current config
+        self.config_logger = ConfigLogger(self.log)
+        self.config_logger(self.args.config)
+
+        default_bucket_key = 1600
         self.args.config.set('arch', 'max_t_count', str(default_bucket_key))
-        self.args.config.set('arch', 'max_label_length', str(100))
+        self.args.config.set('arch', 'max_label_length', str(95))
         self.labelUtil = LabelUtil()
         is_bi_graphemes = self.args.config.getboolean('common', 'is_bi_graphemes')
         load_labelutil(self.labelUtil, is_bi_graphemes, language="zh")
@@ -156,98 +173,102 @@ class Net(object):
 
         # load model
         self.model_loaded, self.model_num_epoch, self.model_path = load_model(self.args)
-        symbol, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
-        # all_layers = symbol.get_internals()
-        # s_sym = all_layers['concat36457_output']
-        # sm = mx.sym.SoftmaxOutput(data=s_sym, name='softmax')
 
         # self.model = STTBucketingModule(
         #     sym_gen=self.model_loaded,
         #     default_bucket_key=default_bucket_key,
         #     context=self.contexts
         # )
-        s_mod = mx.mod.BucketingModule(sym_gen=self.model_loaded, context=self.contexts,
-                                       default_bucket_key=default_bucket_key)
 
         from importlib import import_module
         prepare_data_template = import_module(self.args.config.get('arch', 'arch_file'))
-        self.init_states = prepare_data_template.prepare_data(self.args)
-        self.width = self.args.config.getint('data', 'width')
-        self.height = self.args.config.getint('data', 'height')
-        s_mod.bind(
-            data_shapes=[('data', (self.batch_size, default_bucket_key, self.width * self.height))] + self.init_states,
-            for_training=False)
-
-        s_mod.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
+        init_states = prepare_data_template.prepare_data(self.args)
+        width = self.args.config.getint('data', 'width')
+        height = self.args.config.getint('data', 'height')
         for bucket in self.buckets:
-            provide_data = [('data', (self.batch_size, bucket, self.width * self.height))] + self.init_states
-            s_mod.switch_bucket(bucket_key=bucket, data_shapes=provide_data)
+            net, init_state_names, ll = self.model_loaded(bucket)
+            net.save('checkpoints/%s-symbol.json' % bucket)
+        input_shapes = dict([('data', (self.batch_size, default_bucket_key, width * height))] + init_states + [('label',(1,18))])
+        # self.executor = net.simple_bind(ctx=mx.cpu(), **input_shapes)
 
-        self.model = s_mod
+        # self.model.bind(data_shapes=[('data', (self.batch_size, default_bucket_key, width * height))] + init_states,
+        #                 label_shapes=[
+        #                     ('label', (self.batch_size, self.args.config.getint('arch', 'max_label_length')))],
+        #                 for_training=True)
+
+        symbol, self.arg_params, self.aux_params = mx.model.load_checkpoint(self.model_path, self.model_num_epoch)
+        all_layers = symbol.get_internals()
+        concat = all_layers['concat36457_output']
+        sm = mx.sym.SoftmaxOutput(data=concat, name='softmax')
+        self.executor = sm.simple_bind(ctx=mx.cpu(), **input_shapes)
+        # self.model.set_params(self.arg_params, self.aux_params, allow_extra=True, allow_missing=True)
+
+        for key in self.executor.arg_dict.keys():
+            if key in self.arg_params:
+                self.arg_params[key].copyto(self.executor.arg_dict[key])
+        init_state_names.remove('data')
+        init_state_names.sort()
+        self.states_dict = dict(zip(init_state_names, self.executor.outputs[1:]))
+        self.input_arr = mx.nd.zeros((self.batch_size, default_bucket_key, width * height))
 
         try:
             from swig_wrapper import Scorer
 
             vocab_list = [chars.encode("utf-8") for chars in self.labelUtil.byList]
-            log.info("vacab_list len is %d" % len(vocab_list))
+            self.log.info("vacab_list len is %d" % len(vocab_list))
             _ext_scorer = Scorer(0.26, 0.1, self.args.config.get('common', 'kenlm'), vocab_list)
             lm_char_based = _ext_scorer.is_character_based()
             lm_max_order = _ext_scorer.get_max_order()
             lm_dict_size = _ext_scorer.get_dict_size()
-            log.info("language model: "
-                     "is_character_based = %d," % lm_char_based +
-                     " max_order = %d," % lm_max_order +
-                     " dict_size = %d" % lm_dict_size)
-            self.scorer = _ext_scorer
-            # self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
-            #                                  scorer=_ext_scorer)
+            self.log.info("language model: "
+                          "is_character_based = %d," % lm_char_based +
+                          " max_order = %d," % lm_max_order +
+                          " dict_size = %d" % lm_dict_size)
+            self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
+                                             scorer=_ext_scorer)
         except ImportError:
             import kenlm
             km = kenlm.Model(self.args.config.get('common', 'kenlm'))
-            # self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
-            #                                  scorer=km.score)
-            self.scorer = km.score
+            self.eval_metric = EvalSTTMetric(batch_size=self.batch_size, num_gpu=self.num_gpu, is_logging=True,
+                                             scorer=km.score)
+
+    def forward(self, input_data, new_seq=False):
+        if new_seq == True:
+            for key in self.states_dict.keys():
+                self.executor.arg_dict[key][:] = 0.
+        input_data.copyto(self.executor.arg_dict["data"])
+        self.executor.forward()
+        for key in self.states_dict.keys():
+            self.states_dict[key].copyto(self.executor.arg_dict[key])
+        prob = self.executor.outputs[0].asnumpy()
+        return prob
 
     def getTrans(self, wav_file):
         res = spectrogram_from_file(wav_file, noise_percent=0)
         buck = bisect.bisect_left(self.buckets, len(res))
-        bucket_key = self.buckets[buck]
+        bucket_key = 1600
         res = self.datagen.normalize(res)
         d = np.zeros((self.batch_size, bucket_key, res.shape[1]))
         d[0, :res.shape[0], :] = res
-        init_state_arrays = [mx.nd.zeros(x[1]) for x in self.init_states]
-
-        model_loaded = self.model
-
-        provide_data = [('data', (self.batch_size, bucket_key, self.width * self.height))] + self.init_states
-        data_batch = mx.io.DataBatch([mx.nd.array(d)] + init_state_arrays, label=None, bucket_key=bucket_key,
-                                     provide_data=provide_data, provide_label=None)
         st = time.time()
-        model_loaded.forward(data_batch, is_train=False)
-        probs = model_loaded.get_outputs()[0].asnumpy()
-        log.info("forward cost %.3f" % (time.time() - st))
-        st = time.time()
+        # model_loaded.forward(data_batch, is_train=False)
+        probs = self.forward(mx.nd.array(d))
+        from stt_metric import ctc_greedy_decode
         res = ctc_greedy_decode(probs, self.labelUtil.byList)
-        log.info("greedy decode cost %.3f, result is:\n%s" % (time.time() - st, res))
-        beam_size = 5
-        from stt_metric import ctc_beam_decode
+        self.log.info("forward cost %.2f, %s" % (time.time() - st, res))
         st = time.time()
-        results = ctc_beam_decode(scorer=self.scorer, beam_size=beam_size, vocab=self.labelUtil.byList, probs=probs)
-        log.info("beam decode cost %.3f, result is:\n%s" % (time.time() - st, "\n".join(results)))
-        return "greedy:\n" + res + "\nbeam:\n" + "\n".join(results)
+        # model_loaded.update_metric(self.eval_metric, data_batch.label)
+        self.log.info("upate metric cost %.2f" % (time.time() - st))
+        # print("my res is:")
+        # print(eval_metric.placeholder)
+        return self.eval_metric.placeholder
 
+
+otherNet = Net()
 
 if __name__ == '__main__':
-    if len(sys.argv) <= 1:
-        raise Exception('cfg file path must be provided. ' +
-                        'ex)python main.py --configfile examplecfg.cfg')
-    args = parse_args(sys.argv[1])
-    # set log file name
-    log_filename = args.config.get('common', 'log_filename')
-    log = LogUtil(filename=log_filename).getlogger()
-    otherNet = Net(args)
+    server = HTTPServer(('', 8089), SimpleHTTPRequestHandler)
+    print('Started httpserver on port')
 
-    server = HTTPServer(('', args.config.getint('common', 'port')), SimpleHTTPRequestHandler)
-    log.info('Started httpserver on port')
     # Wait forever for incoming htto requests
     server.serve_forever()
